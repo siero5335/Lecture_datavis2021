@@ -1,0 +1,655 @@
+---
+title: "データの加工・集計と統計モデルのデータ可視化"
+
+output:
+  xaringan::moon_reader:
+    lib_dir: libs
+    css: xaringan-themer.css
+    nature:
+      highlightStyle: github
+      highlightLines: true
+      countIncrementalSlides: false
+---
+
+```{r, include=FALSE}
+options(htmltools.dir.version = FALSE)
+```
+
+```{r xaringan-themer, include=FALSE, warning=FALSE}
+library(xaringan)
+library(xaringanthemer)
+style_duo_accent(
+  text_font_size = "18px",
+  code_font_size = "18px",
+  primary_color = "#134459",
+  secondary_color = "#563de3",
+  inverse_header_color = "#FFFFFF",
+  header_background_color = "#43bf17",
+  header_background_auto = TRUE,
+  header_h1_font_size = "30px",
+  header_h2_font_size = "20px",
+  header_h3_font_size = "18px",
+)
+```
+
+```{css, echo = FALSE}
+.remark-slide-content {
+  font-size: 18px;
+  padding: 20px 80px 20px 80px;
+}
+.remark-code, .remark-inline-code {
+  background: #f0f0f0;
+}
+.remark-code {
+  font-size: 18px;
+}
+.huge .remark-code { /*Change made here*/
+  font-size: 200% !important;
+  
+}
+.tiny .remark-code { /*Change made here*/
+  font-size: 50% !important;
+  
+}
+.small .remark-code { /*Change made here*/
+  font-size: 66% !important;
+  
+}
+.small2 .remark-code { /*Change made here*/
+  font-size: 80% !important;
+  
+}
+
+```
+
+```{css slide-number-off, echo = FALSE}
+.remark-slide-number {
+  display: none;
+}
+```
+
+# 本チュートリアルで使用するパッケージ
+```{r, message=F}
+library(tidyverse); library(socviz); library(palmerpenguins)
+```
+
+## tidyverse  
+本チュートリアルの根幹    
+複数のパッケージの集まり  
+本チュートリアルでは特にggplot2, dplyr, tidyrパッケージが関連する
+
+## socviz  
+データ可視化入門本に紐づく便利な関数を集めたパッケージ  
+
+## palmerpenguins
+チュートリアルの本セクションで使用するデータセットを含むパッケージ  
+用いるpenguins_rawデータは344行、17列  行が検体、列が変数を表すデータ    
+3箇所の島に生息する、3種の異なるペンギンに関するデータが格納
+
+---
+
+# 本チュートリアルで使用するデータ
+.small2[
+```{r}
+str(penguins_raw, give.attr = F)
+```
+]
+
+どのペンギンか (Specoes), どの島に生息 (Island), 体長・性別等  
+生態系・食性の指標 (Delta 15 N, Delta 13C), コメントなどのデータが格納
+
+
+---
+# 目標の図1
+```{r, echo=F, message=F, fig.width=12, fig.height=5.5}
+tmp <- penguins_raw %>% tidyr::complete(Island, Species) %>%
+  group_by(Island, Species) %>%
+  summarize(N = n()) %>%
+  mutate(N = case_when(N == 1 ~ 0,
+                       TRUE ~ as.numeric(N)),
+         freq = N/sum(N),
+         pct = round((freq * 100), 0))
+
+tmp %>% ggplot(aes(x = Island, y = pct, fill = Species)) +
+  geom_col(position = "dodge")
+```
+
+それぞれの島ごとにおける種の割合を可視化したい
+
+---
+# まず普通に描いてみる1
+```{r, message=F, fig.width=12, fig.height=4}
+penguins_raw %>% ggplot(aes(x = Island, fill = Species)) +
+  geom_bar()
+```
+
+縦軸が割合ではなく単純なカウントになっている  
+それぞれの種が縦に積まれる形になってしまっている  
+
+---
+# まず普通に描いてみる2
+```{r, message=F, fig.width=12, fig.height=4}
+penguins_raw %>% ggplot(aes(x = Island, fill = Species)) +
+  geom_bar(position = "dodge")
+```
+
+position引数に"dodge"を指定すると種別に並べて作図できる  
+が、カウントが0の項目が無視されてしまう  
+バーの太さが等倍ではなく、カテゴリの数に依存してしまう
+
+
+---
+# 縦軸を割合に: 1
+```{r, message=F, fig.width=12, fig.height=4}
+penguins_raw %>% ggplot(aes(x = Island, fill = Species)) +
+  geom_bar(position = "dodge",
+           aes(y = after_stat(prop)))
+```
+縦軸が割合になっているが、全ての値が１になってしまう  
+→ 何を分母にした割合なのか指定していないため
+
+---
+# 縦軸を割合に: 2
+```{r, message=F, fig.width=12, fig.height=4}
+penguins_raw %>% ggplot(aes(x = Island, fill = Species)) +
+  geom_bar(position = "dodge",
+           aes(y = after_stat(prop), group = Species))
+```
+
+group引数にSpeciesを与えてやると、種のカウントにしたがって割合にしてくれる
+が、島ごとではなく、種全体を1として割合が算出されている
+
+---
+# 島ごとにおける種の割合に変更
+```{r, message=F, fig.width=12, fig.height=4}
+penguins_raw %>% 
+  ggplot(aes(x = Island, fill = Species)) +
+  geom_bar(aes(y = after_stat(count/tapply(count, x, sum)[x]), 
+               group = Species), position = "dodge") 
+```
+
+after_stat()関数内で島ごと (x) の割合を計算してy軸の値に使う
+バーの太さが等倍ではなく、カテゴリの数に依存してしまう点は未解決
+
+---
+# バーの太さ問題への対応
+```{r, message=F, fig.width=12, fig.height=4}
+penguins_raw %>% 
+  complete(Species, Island) %>%
+  ggplot(aes(x = Island, fill = Species)) +
+  geom_bar(aes(y = after_stat(count/tapply(count, x, sum)[x]), 
+               group = Species), position = "dodge") 
+```
+
+tidyrパッケージのcomplete()関数で、全通りの組み合わせを作成  
+かなり近づいたがカウントが0なのにバーが立ってしまう  
+コードが複雑になってきて分かりづらい
+
+---
+# データの集計
+## → ggplot2に集計をお任せにすると、かゆいところに手が届かない場面があるかも？  
+## → 自分で集計したデータを使って可視化すると良いかも  
+  
+## dplyr?  
+table型データの操作に適したパッケージ  
+データの加工・集計の際に便利  
+内部で読み込まれるmagrittrパッケージの機能でパイプ "%>%" を使ってパイプの左側に記述したデータをパイプの右側の処理に受け渡す  
+連続してパイプをつないでまとめていろいろな処理ができる。
+
+---
+# dplyrの主な関数
+## select(): 特定の列を選択  
+
+## filter(): 特定の行を選択  
+
+## group_by: 特定の変数に基づいてグループを作る
+
+## summarise(): グループ化したデータに基づいて集計する
+
+## mutate(): 新しい変数を作る
+
+## XX_join(): 共通する変数に基づいて2つのデータを結合する (今回は解説せず)
+
+---
+# データの集計: select()関数
+```{r}
+tmp <- penguins_raw %>% 
+  select(Species, Island, Sex, `Flipper Length (mm)`, `Body Mass (g)`)
+head(tmp)
+```
+
+目的の列のみをselect()で抽出
+
+---
+# データの集計: select()関数
+```{r}
+tmp <- penguins_raw %>% 
+  select(!c(Species, Island, Sex, `Flipper Length (mm)`, `Body Mass (g)`))
+head(tmp)
+```
+
+!をつけると選択した列以外を抽出できる
+
+---
+# データの集計: filter()関数
+```{r}
+tmp <- penguins_raw %>% 
+  filter(Species == "Gentoo penguin (Pygoscelis papua)")
+head(tmp)
+```
+
+filter()で行の抽出が可能
+上記では種 (Species) がGentoo penguin (Pygoscelis papua) である行のみを抽出
+文字列の場合は""で囲んで文字列として取り扱う
+
+---
+# データの集計
+```{r, eval=F}
+tmp <- penguins_raw %>% 
+  filter(`Body Mass (g)` < 2900)
+
+tmp <- penguins_raw %>% 
+  filter(`Date Egg` > "2009-11-30"	)
+
+tmp <- penguins_raw %>% 
+  filter(`Body Mass (g)` < 2900 & `Date Egg` > "2008-11-20")
+```
+
+数値や日付で~以上・以下などを取り扱う事もできる
+また、and (&), or (|) などの演算子で複数条件を取り扱うことも可能
+
+---
+# group_by
+主にデータの集計に用いられる関数
+関数の()内にグループとしてくくりたい変数を記入する
+
+```{r}
+tmp <- penguins_raw %>% group_by(Island)
+head(tmp)
+```
+
+ただ単にgroup_by()関数に渡すだけではデータの見た目は変わらない
+
+---
+# group_by
+主にデータの集計に用いられる関数
+関数の()内にグループとしてくくりたい変数を記入する
+
+```{r}
+tmp <- penguins_raw %>% group_by(Island) %>%
+  summarize(N = n()) %>%
+  mutate(freq = N/sum(N),
+         pct = round((freq * 100), 0))
+tmp
+```
+
+---
+# group_by
+```{r, eval=F}
+tmp <- penguins_raw %>% group_by(Island) %>%
+  summarize(N = n()) %>%
+  mutate(freq = N/sum(N),
+         pct = round((freq * 100), 0))
+```
+summarize()は名の通り集計を実行するための関数。
+内部でn()やmean(), sum(), sd()などの関数を使って、
+group_by()関数で指定した変数で集計値を計算できる。
+
+mutate()関数は新しい変数を追加するための関数。
+様々な加工が可能。
+上記ではNをNの合計で除したfreqという名前の変数を作ったあと、
+それに100を書けて整数にまるめたpctという名前の変数を作っている。
+
+島ごとの割合が計算できる
+
+---
+# group_by
+```{r, eval=F}
+tmp <- penguins_raw %>% group_by(Island, Species) %>%
+  summarize(N = n()) %>%
+  mutate(freq = N/sum(N),
+         pct = round((freq * 100), 0))
+```
+
+group_by()関数の()内に複数の変数をとることで、
+複数の変数にまたがった集計も可能。
+
+---
+# group_by
+```{r, message=FALSE}
+tmp <- penguins_raw %>% complete(Island, Species) %>%
+  group_by(Island, Species) %>%
+  summarize(N = n()) %>%
+  mutate(N = case_when(N == 1 ~ 0,
+                       TRUE ~ as.numeric(N)),
+         freq = N/sum(N),
+         pct = round((freq * 100), 0))
+```
+
+最初の図を作るために先に集計してしまう  
+tidyrパッケージのcomplete()関数を使ってすべての組み合わせを作成
+mutate内のcase_when()関数で、complete()関数で作られた1つしかない組み合わせについては値を1から0に変更  
+その他の変数についてはそのままの数字を入れておく
+
+---
+# group_by
+```{r}
+tmp
+```
+
+結果を確認したところ、思った通りの集計結果を得ることができた
+
+
+---
+# group_by
+```{r, fig.width=12, fig.height=5}
+tmp %>% ggplot(aes(x = Island, y = pct, fill = Species)) +
+  geom_col(position = "dodge")
+```
+
+先に集計を済ませておけば、作図のコードは簡単かつ明快に  
+0の部分にバーが立つこともない
+
+
+---
+# 目標の図2
+```{r, fig.width=12, fig.height=5, echo = F}
+tmp <- penguins_raw %>% 
+  mutate(char = str_c(Island, Species, Sex, sep = "_"))
+
+tmp %>% filter(!is.na(char)) %>% 
+  ggplot(aes(x = reorder(char, `Body Mass (g)`, na.rm = T), y = `Body Mass (g)`, fill = Species)) + 
+  geom_boxplot() + 
+  coord_flip() + 
+  labs(x = NULL) +
+  theme(legend.position = "top")
+```
+
+y軸は島・種・ペンギンの性別、x軸を体重にして、種で色分けをした図を作りたい
+
+---
+
+# データの思い出し
+.small2[
+```{r}
+str(penguins_raw, give.attr = F)
+```
+]
+
+先程の図のy軸の素になる変数 (Island, Species, Sex) はあるがそのものはない  
+→ データを加工して変数を作成
+
+---
+# データの加工
+```{r}
+tmp <- penguins_raw %>% 
+  mutate(char = str_c(Island, Species, Sex, sep = "_"))
+
+head(tmp$char)
+```
+
+tidyverseパッケージに含まれる文字列処理用パッケージのstringrパッケージを利用  
+str_c()関数を使ってIsland, Species, Sex列の文字を結合したchar列を作る
+NAの行があることに注意
+
+---
+# まず普通に描いてみる
+```{r, fig.width=12, fig.height=3, warning=F}
+tmp %>% ggplot(aes(x = char, y = `Body Mass (g)`, fill = Species)) + 
+  geom_boxplot()
+```
+
+x軸の各カテゴリのラベルが重なってしまっている  
+x軸のラベル (char) が意味不明
+
+---
+# x, y軸の入れ替え
+```{r, fig.width=12, fig.height=4, warning=F}
+tmp %>% 
+  ggplot(aes(x = char, y = `Body Mass (g)`, fill = Species)) + 
+  geom_boxplot() + 
+  coord_flip()
+```
+
+coord_flip()関数でx,y軸を入れ替えた  
+NAは性別の情報がない個体が存在するため
+見やすくなったが順序がばらばらでわかりにくい
+凡例の場所やラベル情報をいじりたい…
+
+---
+# 目標の図のためのコード
+```{r, eval = F}
+tmp %>% filter(!is.na(char)) %>% 
+  ggplot(aes(x = reorder(char, `Body Mass (g)`, na.rm = T), 
+             y = `Body Mass (g)`, fill = Species)) + 
+  geom_boxplot() + 
+  coord_flip() + 
+  labs(x = NULL) +
+  theme(legend.position = "top")
+```
+NAをfilter()関数で削除  
+ggplot関数のx引数でreorder()関数を使い、体重順に並び替え
+labs()関数でラベル、theme()関数のlegend.position引数で凡例位置を調整
+
+---
+# 目標の図
+```{r, fig.width=12, fig.height=4.5, warning=F}
+tmp %>% filter(!is.na(char)) %>% 
+  ggplot(aes(x = reorder(char, `Body Mass (g)`, na.rm = T), 
+             y = `Body Mass (g)`, fill = Species)) + 
+  geom_boxplot() + 
+  coord_flip() + 
+  labs(x = NULL) +
+  theme(legend.position = "top")
+```
+
+---
+# 目標の図　改変
+```{r, fig.width=12, fig.height=4.5, warning=F}
+tmp %>% filter(!is.na(char)) %>%
+  ggplot(aes(x = reorder(char, `Body Mass (g)`, na.rm = T), 
+                   y = `Body Mass (g)`, colour = Species)) + 
+  geom_jitter(width = 0.15) + # width引数でズレを調節
+  coord_flip() + 
+  labs(x = NULL) +
+  theme(legend.position = "top")
+```
+各個体を重ならずにプロットしたい場合にはgeom_jitter()を利用すると良い
+
+# 目標の図　改変2
+```{r, fig.width=12, fig.height=4.5, warning=F}
+tmp %>% filter(!is.na(char)) %>%
+  ggplot(aes(x = reorder(char, `Body Mass (g)`, na.rm = T), 
+                   y = `Body Mass (g)`, colour = Species)) + 
+  geom_jitter(width = 0.15) + # width引数でズレを調節
+  coord_flip() + 
+  labs(x = NULL) +
+  scale_y_log10() +
+  theme(legend.position = "top")
+```
+
+scale_y_log10()関数を使うとy軸を対数変換することもできる  
+見た目はx軸なのに、体重をyに指定しているのでscale_yと書く必要があるので注意
+
+---
+# モデルデータの構造
+.tiny[
+```{r}
+model <- lm(`Delta 15 N (o/oo)` ~ `Delta 13 C (o/oo)` + Sex, data = penguins_raw)
+summary(model)
+```
+]
+
+一般的な線形回帰モデルとその結果  
+summary()関数で結果は簡単に確認できるが、数値データをここから抽出するのは難しい
+
+
+---
+# モデルデータの構造
+.tiny[
+```{r}
+str(model, give.attr = F)
+```
+]
+
+str()関数でモデルオブジェクトの構造を確認  
+coefficientsやresidualsを始めとした、モデルに関する様々なデータが格納　　
+これらに直接アクセスして可視化に使うことも簡単ではない
+
+---
+# broomパッケージ
+```{r}
+library(broom)
+model %>% tidy() %>% 　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
+  as.data.frame() %>%　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
+  round_df()
+```
+
+broomパッケージの関数でモデルオブジェクトからデータをdataframeの形で抽出できる  
+tidy()関数で変数名をterm, 回帰係数をestimateなどを抽出できている  
+ここではtidy()関数の出力をas.data.frame()関数でtibbleからdataframeに変更した後、socviz()パッケージのround_df()関数で有効数字を丸めている
+
+---
+# broomパッケージ
+.small2[
+```{r}
+tmp <- model %>% tidy(conf.int = T) %>% 
+  as.data.frame() %>%
+  round_df() %>% filter(term != "(Intercept)")
+
+tmp
+```
+]
+
+tidy(conf.int = T)とすれば95％信頼区間も合わせて抽出できる
+
+---
+# 回帰係数・信頼区間の可視化
+```{r, fig.width=12, fig.height=4.5, warning=F}
+tmp %>% ggplot(aes(x = reorder(term, estimate), y = estimate,
+                   ymin = conf.low, ymax = conf.high)) + 
+  geom_pointrange() + 
+  coord_flip() +
+  labs(x =  NULL, y = "OLS estimate")
+```
+
+データフレームになったデータからの可視化は比較的容易  
+aes()関数の引数ymin, ymaxに信頼区間の上下を指定
+
+---
+# 目標の図
+```{r, fig.width=12, fig.height=4.5, warning=F, echo=F}
+fit_ols <- function(penguins_raw){
+  lm(`Delta 15 N (o/oo)` ~ `Delta 13 C (o/oo)`, data = penguins_raw)
+}
+
+res <- penguins_raw %>% 
+  group_by(Species, Island) %>% 
+  nest() %>% 
+  mutate(model = purrr:::map(data, fit_ols),
+         results = purrr:::map(model, tidy)) %>% 
+  unnest(results) %>% 
+  select(!c(model, data)) %>% 
+  filter(term != "(Intercept)") %>% 
+  round_df()
+
+p <- res %>% ggplot(aes(x = Species,
+                        y = estimate,
+                        ymin = estimate - 2 * std.error,
+                        ymax = estimate + 2 * std.error,
+                        group = Island,
+                        color = Island))
+
+p + geom_pointrange(position = position_dodge(width = 1)) +
+    theme(legend.position = "top") +
+    labs(x = "Species", y = "Estimate", color = "Island") + 
+    coord_flip()
+```
+lm(`Delta 15 N (o/oo)` ~ `Delta 13 C (o/oo)`, data = penguins_raw)の回帰係数を種・島ごとに比較する図を作りたい
+
+
+---
+# group_by()とnest()
+```{r}
+tmp <- penguins_raw %>% group_by(Species) %>% nest()
+tmp
+```
+
+nest()関数を使うと、group_by()関数でグループ化した変数に基づいて入れ子になったデータを作ることができる  
+入れ子になったデータフレームの大きさが各種の個体数に対応している点に注目
+---
+# group_by()とnest()
+
+```{r}
+head(tmp$data[[1]])
+```
+入れ子になったdata列にアクセスすると、それぞれの種ごとにデータが格納されていることがわかる
+
+---
+# group_by()とnest()
+```{r}
+tmp <- penguins_raw %>% group_by(Species, Island) %>% nest()
+tmp
+```
+作成したい目標の図のために、Species, Islandでgroup_byすると上記の様になる
+これを如何に図に持っていくか
+
+```{r}
+fit_ols <- function(df){
+  lm(`Delta 15 N (o/oo)` ~ `Delta 13 C (o/oo)`, data = df)
+}
+```
+先に与えられたデータについてモデルを当てはめるための関数を作っておく
+
+---
+# purrrパッケージとmap()関数
+```{r}
+tidy2 <- function(model){
+  tidy(model, conf.int = T)
+}
+
+tmp <- penguins_raw %>% 
+  group_by(Species, Island) %>% 
+  nest() %>% 
+  mutate(model = map(data, fit_ols),
+         results = map(model, tidy2))
+```
+
+mutate()関数でmodelをnestしたそれぞれのデータに当てはめる
+map()関数はtidyverseパッケージ群のpurrrパッケージに帰属する関数  
+for文をより簡潔に記述するための関数であり、第一引数に記述した対象に対して、第二引数に記述した処理をまとめて実行できる
+tidy()関数を改造したtidy2()関数をmodel列に当てはめてresultに結果を入れておく  
+
+---
+# purrrパッケージとmap()関数
+.small2[
+```{r}
+tmp <- tmp %>% unnest(results) %>% 
+  select(!c(model, data)) %>% 
+  filter(term != "(Intercept)") %>% 
+  round_df()
+
+tmp
+```
+]
+
+unnest()関数は入れ子状になったデータを引数に基づいて入れ子を解除する関数である  
+解除したところ、モデルの結果がSpecies, Islandごとに格納されていることがわかる
+この結果に基づき可視化してみよう
+
+---
+# 目標の図
+.small2[
+```{r, fig.width=12, fig.height=4.5, warning=F}
+p <- tmp %>% ggplot(aes(x = Species,y = estimate,
+                        ymin = conf.low, ymax = conf.high,
+                        group = Island, color = Island))
+
+p + geom_pointrange(position = position_dodge(width = 1)) +
+    theme(legend.position = "top") +
+    labs(x = "Species", y = "Estimate", color = "Island") + 
+    coord_flip()
+```
+]
+
+目標の図を作ることができた

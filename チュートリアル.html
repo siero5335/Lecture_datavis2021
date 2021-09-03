@@ -1,0 +1,1033 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>データの加工・集計と統計モデルのデータ可視化</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+# データの加工・集計と統計モデルのデータ可視化
+
+---
+
+
+
+
+
+
+&lt;style type="text/css"&gt;
+.remark-slide-content {
+  font-size: 18px;
+  padding: 20px 80px 20px 80px;
+}
+.remark-code, .remark-inline-code {
+  background: #f0f0f0;
+}
+.remark-code {
+  font-size: 18px;
+}
+.huge .remark-code { /*Change made here*/
+  font-size: 200% !important;
+  
+}
+.tiny .remark-code { /*Change made here*/
+  font-size: 50% !important;
+  
+}
+.small .remark-code { /*Change made here*/
+  font-size: 66% !important;
+  
+}
+.small2 .remark-code { /*Change made here*/
+  font-size: 80% !important;
+  
+}
+
+&lt;/style&gt;
+
+&lt;style type="text/css"&gt;
+.remark-slide-number {
+  display: none;
+}
+&lt;/style&gt;
+
+# 本チュートリアルで使用するパッケージ
+
+```r
+library(tidyverse); library(socviz); library(palmerpenguins)
+```
+
+## tidyverse  
+本チュートリアルの根幹    
+複数のパッケージの集まり  
+本チュートリアルでは特にggplot2, dplyr, tidyrパッケージが関連する
+
+## socviz  
+データ可視化入門本に紐づく便利な関数を集めたパッケージ  
+
+## palmerpenguins
+チュートリアルの本セクションで使用するデータセットを含むパッケージ  
+用いるpenguins_rawデータは344行、17列  行が検体、列が変数を表すデータ    
+3箇所の島に生息する、3種の異なるペンギンに関するデータが格納
+
+---
+
+# 本チュートリアルで使用するデータ
+.small2[
+
+```r
+str(penguins_raw, give.attr = F)
+```
+
+```
+## tibble [344 × 17] (S3: tbl_df/tbl/data.frame)
+##  $ studyName          : chr [1:344] "PAL0708" "PAL0708" "PAL0708" "PAL0708" ...
+##  $ Sample Number      : num [1:344] 1 2 3 4 5 6 7 8 9 10 ...
+##  $ Species            : chr [1:344] "Adelie Penguin (Pygoscelis adeliae)" "Adelie Penguin (Pygoscelis adeliae)" "Adelie Penguin (Pygoscelis adeliae)" "Adelie Penguin (Pygoscelis adeliae)" ...
+##  $ Region             : chr [1:344] "Anvers" "Anvers" "Anvers" "Anvers" ...
+##  $ Island             : chr [1:344] "Torgersen" "Torgersen" "Torgersen" "Torgersen" ...
+##  $ Stage              : chr [1:344] "Adult, 1 Egg Stage" "Adult, 1 Egg Stage" "Adult, 1 Egg Stage" "Adult, 1 Egg Stage" ...
+##  $ Individual ID      : chr [1:344] "N1A1" "N1A2" "N2A1" "N2A2" ...
+##  $ Clutch Completion  : chr [1:344] "Yes" "Yes" "Yes" "Yes" ...
+##  $ Date Egg           : Date[1:344], format: "2007-11-11" "2007-11-11" ...
+##  $ Culmen Length (mm) : num [1:344] 39.1 39.5 40.3 NA 36.7 39.3 38.9 39.2 34.1 42 ...
+##  $ Culmen Depth (mm)  : num [1:344] 18.7 17.4 18 NA 19.3 20.6 17.8 19.6 18.1 20.2 ...
+##  $ Flipper Length (mm): num [1:344] 181 186 195 NA 193 190 181 195 193 190 ...
+##  $ Body Mass (g)      : num [1:344] 3750 3800 3250 NA 3450 ...
+##  $ Sex                : chr [1:344] "MALE" "FEMALE" "FEMALE" NA ...
+##  $ Delta 15 N (o/oo)  : num [1:344] NA 8.95 8.37 NA 8.77 ...
+##  $ Delta 13 C (o/oo)  : num [1:344] NA -24.7 -25.3 NA -25.3 ...
+##  $ Comments           : chr [1:344] "Not enough blood for isotopes." NA NA "Adult not sampled." ...
+```
+]
+
+どのペンギンか (Specoes), どの島に生息 (Island), 体長・性別等  
+生態系・食性の指標 (Delta 15 N, Delta 13C), コメントなどのデータが格納
+
+
+---
+# 目標の図1
+![](チュートリアル_files/figure-html/unnamed-chunk-5-1.png)&lt;!-- --&gt;
+
+それぞれの島ごとにおける種の割合を可視化したい
+
+---
+# まず普通に描いてみる1
+
+```r
+penguins_raw %&gt;% ggplot(aes(x = Island, fill = Species)) +
+  geom_bar()
+```
+
+![](チュートリアル_files/figure-html/unnamed-chunk-6-1.png)&lt;!-- --&gt;
+
+縦軸が割合ではなく単純なカウントになっている  
+それぞれの種が縦に積まれる形になってしまっている  
+
+---
+# まず普通に描いてみる2
+
+```r
+penguins_raw %&gt;% ggplot(aes(x = Island, fill = Species)) +
+  geom_bar(position = "dodge")
+```
+
+![](チュートリアル_files/figure-html/unnamed-chunk-7-1.png)&lt;!-- --&gt;
+
+position引数に"dodge"を指定すると種別に並べて作図できる  
+が、カウントが0の項目が無視されてしまう  
+バーの太さが等倍ではなく、カテゴリの数に依存してしまう
+
+
+---
+# 縦軸を割合に: 1
+
+```r
+penguins_raw %&gt;% ggplot(aes(x = Island, fill = Species)) +
+  geom_bar(position = "dodge",
+           aes(y = after_stat(prop)))
+```
+
+![](チュートリアル_files/figure-html/unnamed-chunk-8-1.png)&lt;!-- --&gt;
+縦軸が割合になっているが、全ての値が１になってしまう  
+→ 何を分母にした割合なのか指定していないため
+
+---
+# 縦軸を割合に: 2
+
+```r
+penguins_raw %&gt;% ggplot(aes(x = Island, fill = Species)) +
+  geom_bar(position = "dodge",
+           aes(y = after_stat(prop), group = Species))
+```
+
+![](チュートリアル_files/figure-html/unnamed-chunk-9-1.png)&lt;!-- --&gt;
+
+group引数にSpeciesを与えてやると、種のカウントにしたがって割合にしてくれる
+が、島ごとではなく、種全体を1として割合が算出されている
+
+---
+# 島ごとにおける種の割合に変更
+
+```r
+penguins_raw %&gt;% 
+  ggplot(aes(x = Island, fill = Species)) +
+  geom_bar(aes(y = after_stat(count/tapply(count, x, sum)[x]), 
+               group = Species), position = "dodge") 
+```
+
+![](チュートリアル_files/figure-html/unnamed-chunk-10-1.png)&lt;!-- --&gt;
+
+after_stat()関数内で島ごと (x) の割合を計算してy軸の値に使う
+バーの太さが等倍ではなく、カテゴリの数に依存してしまう点は未解決
+
+---
+# バーの太さ問題への対応
+
+```r
+penguins_raw %&gt;% 
+  complete(Species, Island) %&gt;%
+  ggplot(aes(x = Island, fill = Species)) +
+  geom_bar(aes(y = after_stat(count/tapply(count, x, sum)[x]), 
+               group = Species), position = "dodge") 
+```
+
+![](チュートリアル_files/figure-html/unnamed-chunk-11-1.png)&lt;!-- --&gt;
+
+tidyrパッケージのcomplete()関数で、全通りの組み合わせを作成  
+かなり近づいたがカウントが0なのにバーが立ってしまう  
+コードが複雑になってきて分かりづらい
+
+---
+# データの集計
+## → ggplot2に集計をお任せにすると、かゆいところに手が届かない場面があるかも？  
+## → 自分で集計したデータを使って可視化すると良いかも  
+  
+## dplyr?  
+table型データの操作に適したパッケージ  
+データの加工・集計の際に便利  
+内部で読み込まれるmagrittrパッケージの機能でパイプ "%&gt;%" を使ってパイプの左側に記述したデータをパイプの右側の処理に受け渡す  
+連続してパイプをつないでまとめていろいろな処理ができる。
+
+---
+# dplyrの主な関数
+## select(): 特定の列を選択  
+
+## filter(): 特定の行を選択  
+
+## group_by: 特定の変数に基づいてグループを作る
+
+## summarise(): グループ化したデータに基づいて集計する
+
+## mutate(): 新しい変数を作る
+
+## XX_join(): 共通する変数に基づいて2つのデータを結合する (今回は解説せず)
+
+---
+# データの集計: select()関数
+
+```r
+tmp &lt;- penguins_raw %&gt;% 
+  select(Species, Island, Sex, `Flipper Length (mm)`, `Body Mass (g)`)
+head(tmp)
+```
+
+```
+## # A tibble: 6 × 5
+##   Species                             Island    Sex    `Flipper Length… `Body Mass (g)`
+##   &lt;chr&gt;                               &lt;chr&gt;     &lt;chr&gt;             &lt;dbl&gt;           &lt;dbl&gt;
+## 1 Adelie Penguin (Pygoscelis adeliae) Torgersen MALE                181            3750
+## 2 Adelie Penguin (Pygoscelis adeliae) Torgersen FEMALE              186            3800
+## 3 Adelie Penguin (Pygoscelis adeliae) Torgersen FEMALE              195            3250
+## 4 Adelie Penguin (Pygoscelis adeliae) Torgersen &lt;NA&gt;                 NA              NA
+## 5 Adelie Penguin (Pygoscelis adeliae) Torgersen FEMALE              193            3450
+## 6 Adelie Penguin (Pygoscelis adeliae) Torgersen MALE                190            3650
+```
+
+目的の列のみをselect()で抽出
+
+---
+# データの集計: select()関数
+
+```r
+tmp &lt;- penguins_raw %&gt;% 
+  select(!c(Species, Island, Sex, `Flipper Length (mm)`, `Body Mass (g)`))
+head(tmp)
+```
+
+```
+## # A tibble: 6 × 12
+##   studyName `Sample Number` Region Stage              `Individual ID` `Clutch Complet…
+##   &lt;chr&gt;               &lt;dbl&gt; &lt;chr&gt;  &lt;chr&gt;              &lt;chr&gt;           &lt;chr&gt;           
+## 1 PAL0708                 1 Anvers Adult, 1 Egg Stage N1A1            Yes             
+## 2 PAL0708                 2 Anvers Adult, 1 Egg Stage N1A2            Yes             
+## 3 PAL0708                 3 Anvers Adult, 1 Egg Stage N2A1            Yes             
+## 4 PAL0708                 4 Anvers Adult, 1 Egg Stage N2A2            Yes             
+## 5 PAL0708                 5 Anvers Adult, 1 Egg Stage N3A1            Yes             
+## 6 PAL0708                 6 Anvers Adult, 1 Egg Stage N3A2            Yes             
+## # … with 6 more variables: Date Egg &lt;date&gt;, Culmen Length (mm) &lt;dbl&gt;,
+## #   Culmen Depth (mm) &lt;dbl&gt;, Delta 15 N (o/oo) &lt;dbl&gt;, Delta 13 C (o/oo) &lt;dbl&gt;,
+## #   Comments &lt;chr&gt;
+```
+
+!をつけると選択した列以外を抽出できる
+
+---
+# データの集計: filter()関数
+
+```r
+tmp &lt;- penguins_raw %&gt;% 
+  filter(Species == "Gentoo penguin (Pygoscelis papua)")
+head(tmp)
+```
+
+```
+## # A tibble: 6 × 17
+##   studyName `Sample Number` Species       Region Island Stage    `Individual ID`
+##   &lt;chr&gt;               &lt;dbl&gt; &lt;chr&gt;         &lt;chr&gt;  &lt;chr&gt;  &lt;chr&gt;    &lt;chr&gt;          
+## 1 PAL0708                 1 Gentoo pengu… Anvers Biscoe Adult, … N31A1          
+## 2 PAL0708                 2 Gentoo pengu… Anvers Biscoe Adult, … N31A2          
+## 3 PAL0708                 3 Gentoo pengu… Anvers Biscoe Adult, … N32A1          
+## 4 PAL0708                 4 Gentoo pengu… Anvers Biscoe Adult, … N32A2          
+## 5 PAL0708                 5 Gentoo pengu… Anvers Biscoe Adult, … N33A1          
+## 6 PAL0708                 6 Gentoo pengu… Anvers Biscoe Adult, … N33A2          
+## # … with 10 more variables: Clutch Completion &lt;chr&gt;, Date Egg &lt;date&gt;,
+## #   Culmen Length (mm) &lt;dbl&gt;, Culmen Depth (mm) &lt;dbl&gt;,
+## #   Flipper Length (mm) &lt;dbl&gt;, Body Mass (g) &lt;dbl&gt;, Sex &lt;chr&gt;,
+## #   Delta 15 N (o/oo) &lt;dbl&gt;, Delta 13 C (o/oo) &lt;dbl&gt;, Comments &lt;chr&gt;
+```
+
+filter()で行の抽出が可能
+上記では種 (Species) がGentoo penguin (Pygoscelis papua) である行のみを抽出
+文字列の場合は""で囲んで文字列として取り扱う
+
+---
+# データの集計
+
+```r
+tmp &lt;- penguins_raw %&gt;% 
+  filter(`Body Mass (g)` &lt; 2900)
+
+tmp &lt;- penguins_raw %&gt;% 
+  filter(`Date Egg` &gt; "2009-11-30"	)
+
+tmp &lt;- penguins_raw %&gt;% 
+  filter(`Body Mass (g)` &lt; 2900 &amp; `Date Egg` &gt; "2008-11-20")
+```
+
+数値や日付で~以上・以下などを取り扱う事もできる
+また、and (&amp;), or (|) などの演算子で複数条件を取り扱うことも可能
+
+---
+# group_by
+主にデータの集計に用いられる関数
+関数の()内にグループとしてくくりたい変数を記入する
+
+
+```r
+tmp &lt;- penguins_raw %&gt;% group_by(Island)
+head(tmp)
+```
+
+```
+## # A tibble: 6 × 17
+## # Groups:   Island [1]
+##   studyName `Sample Number` Species       Region Island  Stage   `Individual ID`
+##   &lt;chr&gt;               &lt;dbl&gt; &lt;chr&gt;         &lt;chr&gt;  &lt;chr&gt;   &lt;chr&gt;   &lt;chr&gt;          
+## 1 PAL0708                 1 Adelie Pengu… Anvers Torger… Adult,… N1A1           
+## 2 PAL0708                 2 Adelie Pengu… Anvers Torger… Adult,… N1A2           
+## 3 PAL0708                 3 Adelie Pengu… Anvers Torger… Adult,… N2A1           
+## 4 PAL0708                 4 Adelie Pengu… Anvers Torger… Adult,… N2A2           
+## 5 PAL0708                 5 Adelie Pengu… Anvers Torger… Adult,… N3A1           
+## 6 PAL0708                 6 Adelie Pengu… Anvers Torger… Adult,… N3A2           
+## # … with 10 more variables: Clutch Completion &lt;chr&gt;, Date Egg &lt;date&gt;,
+## #   Culmen Length (mm) &lt;dbl&gt;, Culmen Depth (mm) &lt;dbl&gt;,
+## #   Flipper Length (mm) &lt;dbl&gt;, Body Mass (g) &lt;dbl&gt;, Sex &lt;chr&gt;,
+## #   Delta 15 N (o/oo) &lt;dbl&gt;, Delta 13 C (o/oo) &lt;dbl&gt;, Comments &lt;chr&gt;
+```
+
+ただ単にgroup_by()関数に渡すだけではデータの見た目は変わらない
+
+---
+# group_by
+主にデータの集計に用いられる関数
+関数の()内にグループとしてくくりたい変数を記入する
+
+
+```r
+tmp &lt;- penguins_raw %&gt;% group_by(Island) %&gt;%
+  summarize(N = n()) %&gt;%
+  mutate(freq = N/sum(N),
+         pct = round((freq * 100), 0))
+tmp
+```
+
+```
+## # A tibble: 3 × 4
+##   Island        N  freq   pct
+##   &lt;chr&gt;     &lt;int&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1 Biscoe      168 0.488    49
+## 2 Dream       124 0.360    36
+## 3 Torgersen    52 0.151    15
+```
+
+---
+# group_by
+
+```r
+tmp &lt;- penguins_raw %&gt;% group_by(Island) %&gt;%
+  summarize(N = n()) %&gt;%
+  mutate(freq = N/sum(N),
+         pct = round((freq * 100), 0))
+```
+summarize()は名の通り集計を実行するための関数。
+内部でn()やmean(), sum(), sd()などの関数を使って、
+group_by()関数で指定した変数で集計値を計算できる。
+
+mutate()関数は新しい変数を追加するための関数。
+様々な加工が可能。
+上記ではNをNの合計で除したfreqという名前の変数を作ったあと、
+それに100を書けて整数にまるめたpctという名前の変数を作っている。
+
+島ごとの割合が計算できる
+
+---
+# group_by
+
+```r
+tmp &lt;- penguins_raw %&gt;% group_by(Island, Species) %&gt;%
+  summarize(N = n()) %&gt;%
+  mutate(freq = N/sum(N),
+         pct = round((freq * 100), 0))
+```
+
+group_by()関数の()内に複数の変数をとることで、
+複数の変数にまたがった集計も可能。
+
+---
+# group_by
+
+```r
+tmp &lt;- penguins_raw %&gt;% complete(Island, Species) %&gt;%
+  group_by(Island, Species) %&gt;%
+  summarize(N = n()) %&gt;%
+  mutate(N = case_when(N == 1 ~ 0,
+                       TRUE ~ as.numeric(N)),
+         freq = N/sum(N),
+         pct = round((freq * 100), 0))
+```
+
+最初の図を作るために先に集計してしまう  
+tidyrパッケージのcomplete()関数を使ってすべての組み合わせを作成
+mutate内のcase_when()関数で、complete()関数で作られた1つしかない組み合わせについては値を1から0に変更  
+その他の変数についてはそのままの数字を入れておく
+
+---
+# group_by
+
+```r
+tmp
+```
+
+```
+## # A tibble: 9 × 5
+## # Groups:   Island [3]
+##   Island    Species                                       N  freq   pct
+##   &lt;chr&gt;     &lt;chr&gt;                                     &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;
+## 1 Biscoe    Adelie Penguin (Pygoscelis adeliae)          44 0.262    26
+## 2 Biscoe    Chinstrap penguin (Pygoscelis antarctica)     0 0         0
+## 3 Biscoe    Gentoo penguin (Pygoscelis papua)           124 0.738    74
+## 4 Dream     Adelie Penguin (Pygoscelis adeliae)          56 0.452    45
+## 5 Dream     Chinstrap penguin (Pygoscelis antarctica)    68 0.548    55
+## 6 Dream     Gentoo penguin (Pygoscelis papua)             0 0         0
+## 7 Torgersen Adelie Penguin (Pygoscelis adeliae)          52 1       100
+## 8 Torgersen Chinstrap penguin (Pygoscelis antarctica)     0 0         0
+## 9 Torgersen Gentoo penguin (Pygoscelis papua)             0 0         0
+```
+
+結果を確認したところ、思った通りの集計結果を得ることができた
+
+
+---
+# group_by
+
+```r
+tmp %&gt;% ggplot(aes(x = Island, y = pct, fill = Species)) +
+  geom_col(position = "dodge")
+```
+
+![](チュートリアル_files/figure-html/unnamed-chunk-22-1.png)&lt;!-- --&gt;
+
+先に集計を済ませておけば、作図のコードは簡単かつ明快に  
+0の部分にバーが立つこともない
+
+
+---
+# 目標の図2
+![](チュートリアル_files/figure-html/unnamed-chunk-23-1.png)&lt;!-- --&gt;
+
+y軸は島・種・ペンギンの性別、x軸を体重にして、種で色分けをした図を作りたい
+
+---
+
+# データの思い出し
+.small2[
+
+```r
+str(penguins_raw, give.attr = F)
+```
+
+```
+## tibble [344 × 17] (S3: tbl_df/tbl/data.frame)
+##  $ studyName          : chr [1:344] "PAL0708" "PAL0708" "PAL0708" "PAL0708" ...
+##  $ Sample Number      : num [1:344] 1 2 3 4 5 6 7 8 9 10 ...
+##  $ Species            : chr [1:344] "Adelie Penguin (Pygoscelis adeliae)" "Adelie Penguin (Pygoscelis adeliae)" "Adelie Penguin (Pygoscelis adeliae)" "Adelie Penguin (Pygoscelis adeliae)" ...
+##  $ Region             : chr [1:344] "Anvers" "Anvers" "Anvers" "Anvers" ...
+##  $ Island             : chr [1:344] "Torgersen" "Torgersen" "Torgersen" "Torgersen" ...
+##  $ Stage              : chr [1:344] "Adult, 1 Egg Stage" "Adult, 1 Egg Stage" "Adult, 1 Egg Stage" "Adult, 1 Egg Stage" ...
+##  $ Individual ID      : chr [1:344] "N1A1" "N1A2" "N2A1" "N2A2" ...
+##  $ Clutch Completion  : chr [1:344] "Yes" "Yes" "Yes" "Yes" ...
+##  $ Date Egg           : Date[1:344], format: "2007-11-11" "2007-11-11" ...
+##  $ Culmen Length (mm) : num [1:344] 39.1 39.5 40.3 NA 36.7 39.3 38.9 39.2 34.1 42 ...
+##  $ Culmen Depth (mm)  : num [1:344] 18.7 17.4 18 NA 19.3 20.6 17.8 19.6 18.1 20.2 ...
+##  $ Flipper Length (mm): num [1:344] 181 186 195 NA 193 190 181 195 193 190 ...
+##  $ Body Mass (g)      : num [1:344] 3750 3800 3250 NA 3450 ...
+##  $ Sex                : chr [1:344] "MALE" "FEMALE" "FEMALE" NA ...
+##  $ Delta 15 N (o/oo)  : num [1:344] NA 8.95 8.37 NA 8.77 ...
+##  $ Delta 13 C (o/oo)  : num [1:344] NA -24.7 -25.3 NA -25.3 ...
+##  $ Comments           : chr [1:344] "Not enough blood for isotopes." NA NA "Adult not sampled." ...
+```
+]
+
+先程の図のy軸の素になる変数 (Island, Species, Sex) はあるがそのものはない  
+→ データを加工して変数を作成
+
+---
+# データの加工
+
+```r
+tmp &lt;- penguins_raw %&gt;% 
+  mutate(char = str_c(Island, Species, Sex, sep = "_"))
+
+head(tmp$char)
+```
+
+```
+## [1] "Torgersen_Adelie Penguin (Pygoscelis adeliae)_MALE"  
+## [2] "Torgersen_Adelie Penguin (Pygoscelis adeliae)_FEMALE"
+## [3] "Torgersen_Adelie Penguin (Pygoscelis adeliae)_FEMALE"
+## [4] NA                                                    
+## [5] "Torgersen_Adelie Penguin (Pygoscelis adeliae)_FEMALE"
+## [6] "Torgersen_Adelie Penguin (Pygoscelis adeliae)_MALE"
+```
+
+tidyverseパッケージに含まれる文字列処理用パッケージのstringrパッケージを利用  
+str_c()関数を使ってIsland, Species, Sex列の文字を結合したchar列を作る
+NAの行があることに注意
+
+---
+# まず普通に描いてみる
+
+```r
+tmp %&gt;% ggplot(aes(x = char, y = `Body Mass (g)`, fill = Species)) + 
+  geom_boxplot()
+```
+
+![](チュートリアル_files/figure-html/unnamed-chunk-26-1.png)&lt;!-- --&gt;
+
+x軸の各カテゴリのラベルが重なってしまっている  
+x軸のラベル (char) が意味不明
+
+---
+# x, y軸の入れ替え
+
+```r
+tmp %&gt;% 
+  ggplot(aes(x = char, y = `Body Mass (g)`, fill = Species)) + 
+  geom_boxplot() + 
+  coord_flip()
+```
+
+![](チュートリアル_files/figure-html/unnamed-chunk-27-1.png)&lt;!-- --&gt;
+
+coord_flip()関数でx,y軸を入れ替えた  
+NAは性別の情報がない個体が存在するため
+見やすくなったが順序がばらばらでわかりにくい
+凡例の場所やラベル情報をいじりたい…
+
+---
+# 目標の図のためのコード
+
+```r
+tmp %&gt;% filter(!is.na(char)) %&gt;% 
+  ggplot(aes(x = reorder(char, `Body Mass (g)`, na.rm = T), 
+             y = `Body Mass (g)`, fill = Species)) + 
+  geom_boxplot() + 
+  coord_flip() + 
+  labs(x = NULL) +
+  theme(legend.position = "top")
+```
+NAをfilter()関数で削除  
+ggplot関数のx引数でreorder()関数を使い、体重順に並び替え
+labs()関数でラベル、theme()関数のlegend.position引数で凡例位置を調整
+
+---
+# 目標の図
+
+```r
+tmp %&gt;% filter(!is.na(char)) %&gt;% 
+  ggplot(aes(x = reorder(char, `Body Mass (g)`, na.rm = T), 
+             y = `Body Mass (g)`, fill = Species)) + 
+  geom_boxplot() + 
+  coord_flip() + 
+  labs(x = NULL) +
+  theme(legend.position = "top")
+```
+
+![](チュートリアル_files/figure-html/unnamed-chunk-29-1.png)&lt;!-- --&gt;
+
+---
+# 目標の図　改変
+
+```r
+tmp %&gt;% filter(!is.na(char)) %&gt;%
+  ggplot(aes(x = reorder(char, `Body Mass (g)`, na.rm = T), 
+                   y = `Body Mass (g)`, colour = Species)) + 
+  geom_jitter(width = 0.15) + # width引数でズレを調節
+  coord_flip() + 
+  labs(x = NULL) +
+  theme(legend.position = "top")
+```
+
+![](チュートリアル_files/figure-html/unnamed-chunk-30-1.png)&lt;!-- --&gt;
+各個体を重ならずにプロットしたい場合にはgeom_jitter()を利用すると良い
+
+# 目標の図　改変2
+
+```r
+tmp %&gt;% filter(!is.na(char)) %&gt;%
+  ggplot(aes(x = reorder(char, `Body Mass (g)`, na.rm = T), 
+                   y = `Body Mass (g)`, colour = Species)) + 
+  geom_jitter(width = 0.15) + # width引数でズレを調節
+  coord_flip() + 
+  labs(x = NULL) +
+  scale_y_log10() +
+  theme(legend.position = "top")
+```
+
+![](チュートリアル_files/figure-html/unnamed-chunk-31-1.png)&lt;!-- --&gt;
+
+scale_y_log10()関数を使うとy軸を対数変換することもできる  
+見た目はx軸なのに、体重をyに指定しているのでscale_yと書く必要があるので注意
+
+---
+# モデルデータの構造
+.tiny[
+
+```r
+model &lt;- lm(`Delta 15 N (o/oo)` ~ `Delta 13 C (o/oo)` + Sex, data = penguins_raw)
+summary(model)
+```
+
+```
+## 
+## Call:
+## lm(formula = `Delta 15 N (o/oo)` ~ `Delta 13 C (o/oo)` + Sex, 
+##     data = penguins_raw)
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -1.1290 -0.2882  0.0500  0.3115  0.9581 
+## 
+## Coefficients:
+##                     Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)         18.90412    0.81406   23.22  &lt; 2e-16 ***
+## `Delta 13 C (o/oo)`  0.39830    0.03167   12.58  &lt; 2e-16 ***
+## SexMALE              0.13606    0.05001    2.72  0.00688 ** 
+## ---
+## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+## 
+## Residual standard error: 0.4501 on 321 degrees of freedom
+##   (20 observations deleted due to missingness)
+## Multiple R-squared:  0.3394,	Adjusted R-squared:  0.3353 
+## F-statistic: 82.47 on 2 and 321 DF,  p-value: &lt; 2.2e-16
+```
+]
+
+一般的な線形回帰モデルとその結果  
+summary()関数で結果は簡単に確認できるが、数値データをここから抽出するのは難しい
+
+
+---
+# モデルデータの構造
+.tiny[
+
+```r
+str(model, give.attr = F)
+```
+
+```
+## List of 14
+##  $ coefficients : Named num [1:3] 18.904 0.398 0.136
+##  $ residuals    : Named num [1:324] -0.119 -0.446 -0.051 -0.299 0.327 ...
+##  $ effects      : Named num [1:324] -157.319 -5.649 1.224 -0.285 0.348 ...
+##  $ rank         : int 3
+##  $ fitted.values: Named num [1:324] 9.07 8.81 8.82 8.96 8.86 ...
+##  $ assign       : int [1:3] 0 1 2
+##  $ qr           :List of 5
+##   ..$ qr   : num [1:324, 1:3] -18 0.0556 0.0556 0.0556 0.0556 ...
+##   ..$ qraux: num [1:3] 1.06 1.02 1.05
+##   ..$ pivot: int [1:3] 1 2 3
+##   ..$ tol  : num 1e-07
+##   ..$ rank : int 3
+##  $ df.residual  : int 321
+##  $ na.action    : 'omit' Named int [1:20] 1 4 9 10 11 12 13 14 16 40 ...
+##  $ contrasts    :List of 1
+##   ..$ Sex: chr "contr.treatment"
+##  $ xlevels      :List of 1
+##   ..$ Sex: chr [1:2] "FEMALE" "MALE"
+##  $ call         : language lm(formula = `Delta 15 N (o/oo)` ~ `Delta 13 C (o/oo)` + Sex, data = penguins_raw)
+##  $ terms        :Classes 'terms', 'formula'  language `Delta 15 N (o/oo)` ~ `Delta 13 C (o/oo)` + Sex
+##  $ model        :'data.frame':	324 obs. of  3 variables:
+##   ..$ Delta 15 N (o/oo): num [1:324] 8.95 8.37 8.77 8.66 9.19 ...
+##   ..$ Delta 13 C (o/oo): num [1:324] -24.7 -25.3 -25.3 -25.3 -25.2 ...
+##   ..$ Sex              : chr [1:324] "FEMALE" "FEMALE" "FEMALE" "MALE" ...
+```
+]
+
+str()関数でモデルオブジェクトの構造を確認  
+coefficientsやresidualsを始めとした、モデルに関する様々なデータが格納　　
+これらに直接アクセスして可視化に使うことも簡単ではない
+
+---
+# broomパッケージ
+
+```r
+library(broom)
+model %&gt;% tidy() %&gt;% 　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
+  as.data.frame() %&gt;%　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
+  round_df()
+```
+
+```
+##                  term estimate std.error statistic p.value
+## 1         (Intercept)    18.90      0.81     23.22    0.00
+## 2 `Delta 13 C (o/oo)`     0.40      0.03     12.58    0.00
+## 3             SexMALE     0.14      0.05      2.72    0.01
+```
+
+broomパッケージの関数でモデルオブジェクトからデータをdataframeの形で抽出できる  
+tidy()関数で変数名をterm, 回帰係数をestimateなどを抽出できている  
+ここではtidy()関数の出力をas.data.frame()関数でtibbleからdataframeに変更した後、socviz()パッケージのround_df()関数で有効数字を丸めている
+
+---
+# broomパッケージ
+.small2[
+
+```r
+tmp &lt;- model %&gt;% tidy(conf.int = T) %&gt;% 
+  as.data.frame() %&gt;%
+  round_df() %&gt;% filter(term != "(Intercept)")
+
+tmp
+```
+
+```
+##                  term estimate std.error statistic p.value conf.low conf.high
+## 1 `Delta 13 C (o/oo)`     0.40      0.03     12.58    0.00     0.34      0.46
+## 2             SexMALE     0.14      0.05      2.72    0.01     0.04      0.23
+```
+]
+
+tidy(conf.int = T)とすれば95％信頼区間も合わせて抽出できる
+
+---
+# 回帰係数・信頼区間の可視化
+
+```r
+tmp %&gt;% ggplot(aes(x = reorder(term, estimate), y = estimate,
+                   ymin = conf.low, ymax = conf.high)) + 
+  geom_pointrange() + 
+  coord_flip() +
+  labs(x =  NULL, y = "OLS estimate")
+```
+
+![](チュートリアル_files/figure-html/unnamed-chunk-36-1.png)&lt;!-- --&gt;
+
+データフレームになったデータからの可視化は比較的容易  
+aes()関数の引数ymin, ymaxに信頼区間の上下を指定
+
+---
+# 目標の図
+![](チュートリアル_files/figure-html/unnamed-chunk-37-1.png)&lt;!-- --&gt;
+lm(`Delta 15 N (o/oo)` ~ `Delta 13 C (o/oo)`, data = penguins_raw)の回帰係数を種・島ごとに比較する図を作りたい
+
+
+---
+# group_by()とnest()
+
+```r
+tmp &lt;- penguins_raw %&gt;% group_by(Species) %&gt;% nest()
+tmp
+```
+
+```
+## # A tibble: 3 × 2
+## # Groups:   Species [3]
+##   Species                                   data               
+##   &lt;chr&gt;                                     &lt;list&gt;             
+## 1 Adelie Penguin (Pygoscelis adeliae)       &lt;tibble [152 × 16]&gt;
+## 2 Gentoo penguin (Pygoscelis papua)         &lt;tibble [124 × 16]&gt;
+## 3 Chinstrap penguin (Pygoscelis antarctica) &lt;tibble [68 × 16]&gt;
+```
+
+nest()関数を使うと、group_by()関数でグループ化した変数に基づいて入れ子になったデータを作ることができる  
+入れ子になったデータフレームの大きさが各種の個体数に対応している点に注目
+---
+# group_by()とnest()
+
+
+```r
+head(tmp$data[[1]])
+```
+
+```
+## # A tibble: 6 × 16
+##   studyName `Sample Number` Region Island    Stage `Individual ID` `Clutch Complet…
+##   &lt;chr&gt;               &lt;dbl&gt; &lt;chr&gt;  &lt;chr&gt;     &lt;chr&gt; &lt;chr&gt;           &lt;chr&gt;           
+## 1 PAL0708                 1 Anvers Torgersen Adul… N1A1            Yes             
+## 2 PAL0708                 2 Anvers Torgersen Adul… N1A2            Yes             
+## 3 PAL0708                 3 Anvers Torgersen Adul… N2A1            Yes             
+## 4 PAL0708                 4 Anvers Torgersen Adul… N2A2            Yes             
+## 5 PAL0708                 5 Anvers Torgersen Adul… N3A1            Yes             
+## 6 PAL0708                 6 Anvers Torgersen Adul… N3A2            Yes             
+## # … with 9 more variables: Date Egg &lt;date&gt;, Culmen Length (mm) &lt;dbl&gt;,
+## #   Culmen Depth (mm) &lt;dbl&gt;, Flipper Length (mm) &lt;dbl&gt;, Body Mass (g) &lt;dbl&gt;,
+## #   Sex &lt;chr&gt;, Delta 15 N (o/oo) &lt;dbl&gt;, Delta 13 C (o/oo) &lt;dbl&gt;, Comments &lt;chr&gt;
+```
+入れ子になったdata列にアクセスすると、それぞれの種ごとにデータが格納されていることがわかる
+
+---
+# group_by()とnest()
+
+```r
+tmp &lt;- penguins_raw %&gt;% group_by(Species, Island) %&gt;% nest()
+tmp
+```
+
+```
+## # A tibble: 5 × 3
+## # Groups:   Species, Island [5]
+##   Species                                   Island    data               
+##   &lt;chr&gt;                                     &lt;chr&gt;     &lt;list&gt;             
+## 1 Adelie Penguin (Pygoscelis adeliae)       Torgersen &lt;tibble [52 × 15]&gt; 
+## 2 Adelie Penguin (Pygoscelis adeliae)       Biscoe    &lt;tibble [44 × 15]&gt; 
+## 3 Adelie Penguin (Pygoscelis adeliae)       Dream     &lt;tibble [56 × 15]&gt; 
+## 4 Gentoo penguin (Pygoscelis papua)         Biscoe    &lt;tibble [124 × 15]&gt;
+## 5 Chinstrap penguin (Pygoscelis antarctica) Dream     &lt;tibble [68 × 15]&gt;
+```
+作成したい目標の図のために、Species, Islandでgroup_byすると上記の様になる
+これを如何に図に持っていくか
+
+
+```r
+fit_ols &lt;- function(df){
+  lm(`Delta 15 N (o/oo)` ~ `Delta 13 C (o/oo)`, data = df)
+}
+```
+先に与えられたデータについてモデルを当てはめるための関数を作っておく
+
+---
+# purrrパッケージとmap()関数
+
+```r
+tidy2 &lt;- function(model){
+  tidy(model, conf.int = T)
+}
+
+tmp &lt;- penguins_raw %&gt;% 
+  group_by(Species, Island) %&gt;% 
+  nest() %&gt;% 
+  mutate(model = map(data, fit_ols),
+         results = map(model, tidy2))
+```
+
+mutate()関数でmodelをnestしたそれぞれのデータに当てはめる
+map()関数はtidyverseパッケージ群のpurrrパッケージに帰属する関数  
+for文をより簡潔に記述するための関数であり、第一引数に記述した対象に対して、第二引数に記述した処理をまとめて実行できる
+tidy()関数を改造したtidy2()関数をmodel列に当てはめてresultに結果を入れておく  
+
+---
+# purrrパッケージとmap()関数
+.small2[
+
+```r
+tmp &lt;- tmp %&gt;% unnest(results) %&gt;% 
+  select(!c(model, data)) %&gt;% 
+  filter(term != "(Intercept)") %&gt;% 
+  round_df()
+
+tmp
+```
+
+```
+## # A tibble: 5 × 9
+##   Species   Island term  estimate std.error statistic p.value conf.low conf.high
+##   &lt;chr&gt;     &lt;chr&gt;  &lt;chr&gt;    &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;   &lt;dbl&gt;    &lt;dbl&gt;     &lt;dbl&gt;
+## 1 Adelie P… Torge… `Del…     0.33      0.1       3.24    0        0.13      0.54
+## 2 Adelie P… Biscoe `Del…     0.24      0.1       2.32    0.03     0.03      0.44
+## 3 Adelie P… Dream  `Del…     0.49      0.07      6.87    0        0.35      0.64
+## 4 Gentoo p… Biscoe `Del…    -0.29      0.04     -7.9     0       -0.36     -0.22
+## 5 Chinstra… Dream  `Del…    -0.25      0.2      -1.2     0.23    -0.65      0.16
+```
+]
+
+unnest()関数は入れ子状になったデータを引数に基づいて入れ子を解除する関数である  
+解除したところ、モデルの結果がSpecies, Islandごとに格納されていることがわかる
+この結果に基づき可視化してみよう
+
+---
+# 目標の図
+.small2[
+
+```r
+p &lt;- tmp %&gt;% ggplot(aes(x = Species,y = estimate,
+                        ymin = conf.low, ymax = conf.high,
+                        group = Island, color = Island))
+
+p + geom_pointrange(position = position_dodge(width = 1)) +
+    theme(legend.position = "top") +
+    labs(x = "Species", y = "Estimate", color = "Island") + 
+    coord_flip()
+```
+
+![](チュートリアル_files/figure-html/unnamed-chunk-44-1.png)&lt;!-- --&gt;
+]
+
+目標の図を作ることができた
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
