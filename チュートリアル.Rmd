@@ -20,7 +20,7 @@ library(xaringan)
 library(xaringanthemer)
 style_duo_accent(
   text_font_size = "18px",
-  code_font_size = "18px",
+  code_font_size = "16px",
   primary_color = "#134459",
   secondary_color = "#563de3",
   inverse_header_color = "#FFFFFF",
@@ -29,6 +29,8 @@ style_duo_accent(
   header_h1_font_size = "30px",
   header_h2_font_size = "20px",
   header_h3_font_size = "18px",
+  header_font_google = google_font("Noto Sans JP"),
+  text_font_google   = google_font("Noto Sans JP"),
 )
 ```
 
@@ -68,43 +70,76 @@ style_duo_accent(
 }
 ```
 
-# 本チュートリアルで使用するパッケージ
+# 目的と目次
+本節では可視化とデータの集計・加工の関係に関する内容と、モデルデータの可視化に関する内容について、palmerpenguinsパッケージのデータを例に解説する  
+データ分析のためのデータ可視化入門では主に5-6章に関連する内容  
+
+・島ごとにおける種の割合の可視化  
+・島・種・ペンギンの性別ごとの体重比較  
+・炭素安定同位体比と窒素安定同位体の回帰モデルデータ可視化
+
+---
+# 本節で使用するパッケージ1
+.small2[
 ```{r, message=F}
-library(tidyverse); library(socviz); library(palmerpenguins)
+library(tidyverse); library(socviz); library(broom); 
+library(palmerpenguins); library(purrr)
 ```
-
+]
 ## tidyverse  
-本チュートリアルの根幹    
-複数のパッケージの集まり  
-本チュートリアルでは特にggplot2, dplyr, tidyrパッケージが関連する
-
-## socviz  
-データ可視化入門本に紐づく便利な関数を集めたパッケージ  
-
-## palmerpenguins
-チュートリアルの本セクションで使用するデータセットを含むパッケージ  
-用いるpenguins_rawデータは344行、17列  行が検体、列が変数を表すデータ    
-3箇所の島に生息する、3種の異なるペンギンに関するデータが格納
+ggplot2, dplyr, tidyr, stringr, purrrなどをまとめたパッケージ 
+## ggplot2  
+データ可視化
+## dplyr, tidyr
+データの集計・加工
+## stringr
+文字列の処理
 
 ---
 
-# 本チュートリアルで使用するデータ
+# 本節で使用するパッケージ1
+.small2[
+```{r, message=F}
+library(tidyverse); library(socviz); library(broom); 
+library(palmerpenguins); library(purrr)
+```
+]
+## purrr
+for文のような繰り返し処理を簡潔に記述するためのパッケージ  
+## broom  
+モデルのオブジェクトから数値データを加工しやすい形で抽出するためのパッケージ  
+## palmerpenguins
+本セクションで使用するデータセットを含むパッケージ  
+3箇所の島に生息する、3種の異なるペンギンに関するデータが格納
+## socviz  
+書籍, data visualizationに紐づく便利な関数を集めたパッケージ  
+
+
+---
+
+# 本節で使用するデータ
 .small2[
 ```{r}
 str(penguins_raw, give.attr = F)
 ```
 ]
 
+palmerpenguinsパッケージのpenguins_rawデータを利用 (344レコード, 17変数)  
 どのペンギンか (Specoes), どの島に生息 (Island), 体長・性別等  
 生態系・食性の指標 (Delta 15 N, Delta 13C), コメントなどのデータが格納
 
+---
+class: inverse, middle, center
+
+# 島ごとにおける種の割合の可視化
+## データの加工・集計1
 
 ---
 # 目標の図1
 ```{r, echo=F, message=F, fig.width=12, fig.height=5.5}
 tmp <- penguins_raw %>% tidyr::complete(Island, Species) %>%
   group_by(Island, Species) %>%
-  summarize(N = n()) %>%
+  summarise(N = n()) %>%
   mutate(N = case_when(N == 1 ~ 0,
                        TRUE ~ as.numeric(N)),
          freq = N/sum(N),
@@ -117,7 +152,7 @@ tmp %>% ggplot(aes(x = Island, y = pct, fill = Species)) +
 それぞれの島ごとにおける種の割合を可視化したい
 
 ---
-# まず普通に描いてみる1
+# まず普通に描いてみる
 ```{r, message=F, fig.width=12, fig.height=4}
 penguins_raw %>% ggplot(aes(x = Island, fill = Species)) +
   geom_bar()
@@ -125,18 +160,19 @@ penguins_raw %>% ggplot(aes(x = Island, fill = Species)) +
 
 縦軸が割合ではなく単純なカウントになっている  
 それぞれの種が縦に積まれる形になってしまっている  
+→ まずは種別にバーを描いてほしい
 
 ---
-# まず普通に描いてみる2
+# バーの分割
 ```{r, message=F, fig.width=12, fig.height=4}
 penguins_raw %>% ggplot(aes(x = Island, fill = Species)) +
   geom_bar(position = "dodge")
 ```
 
 position引数に"dodge"を指定すると種別に並べて作図できる  
-が、カウントが0の項目が無視されてしまう  
-バーの太さが等倍ではなく、カテゴリの数に依存してしまう
-
+カウントが0の項目が無視されてしまうし割合でもない 
+バーの太さが等倍ではなく、カテゴリの数に依存してしまう  
+→ 割合に変換
 
 ---
 # 縦軸を割合に: 1
@@ -156,8 +192,18 @@ penguins_raw %>% ggplot(aes(x = Island, fill = Species)) +
            aes(y = after_stat(prop), group = Species))
 ```
 
-group引数にSpeciesを与えてやると、種のカウントにしたがって割合にしてくれる
+group引数にSpeciesを与えてやると、種のカウントにしたがって割合にしてくれる  
 が、島ごとではなく、種全体を1として割合が算出されている
+
+---
+# 縦軸を割合に: 3
+```{r, message=F, fig.width=12, fig.height=4}
+penguins_raw %>% ggplot(aes(x = Island, fill = Species)) +
+  geom_bar(position = "dodge",
+           aes(y = after_stat(prop), group = Island))
+```
+
+group引数にIslandを与えると種での分割を表現できない...
 
 ---
 # 島ごとにおける種の割合に変更
@@ -168,8 +214,8 @@ penguins_raw %>%
                group = Species), position = "dodge") 
 ```
 
-after_stat()関数内で島ごと (x) の割合を計算してy軸の値に使う
-バーの太さが等倍ではなく、カテゴリの数に依存してしまう点は未解決
+after_stat()関数内で島ごと (x) の割合を計算してy軸の値に使う  
+バーの太さが等倍ではなく、島内の種数に依存してしまう点は未解決
 
 ---
 # バーの太さ問題への対応
@@ -194,7 +240,7 @@ tidyrパッケージのcomplete()関数で、全通りの組み合わせを作�
 table型データの操作に適したパッケージ  
 データの加工・集計の際に便利  
 内部で読み込まれるmagrittrパッケージの機能でパイプ "%>%" を使ってパイプの左側に記述したデータをパイプの右側の処理に受け渡す  
-連続してパイプをつないでまとめていろいろな処理ができる。
+連続してパイプをつないでまとめていろいろな処理ができる
 
 ---
 # dplyrの主な関数
@@ -202,7 +248,7 @@ table型データの操作に適したパッケージ
 
 ## filter(): 特定の行を選択  
 
-## group_by: 特定の変数に基づいてグループを作る
+## group_by(): 特定の変数に基づいてグループを作る
 
 ## summarise(): グループ化したデータに基づいて集計する
 
@@ -214,7 +260,7 @@ table型データの操作に適したパッケージ
 # データの集計: select()関数
 ```{r}
 tmp <- penguins_raw %>% 
-  select(Species, Island, Sex, `Flipper Length (mm)`, `Body Mass (g)`)
+  select(Species, Island, Sex)
 head(tmp)
 ```
 
@@ -222,11 +268,13 @@ head(tmp)
 
 ---
 # データの集計: select()関数
+.small2[
 ```{r}
 tmp <- penguins_raw %>% 
   select(!c(Species, Island, Sex, `Flipper Length (mm)`, `Body Mass (g)`))
 head(tmp)
 ```
+]
 
 !をつけると選択した列以外を抽出できる
 
@@ -238,8 +286,8 @@ tmp <- penguins_raw %>%
 head(tmp)
 ```
 
-filter()で行の抽出が可能
-上記では種 (Species) がGentoo penguin (Pygoscelis papua) である行のみを抽出
+filter()で行の抽出が可能  
+上記では種 (Species) がGentoo penguin (Pygoscelis papua) である行のみを抽出  
 文字列の場合は""で囲んで文字列として取り扱う
 
 ---
@@ -249,77 +297,91 @@ tmp <- penguins_raw %>%
   filter(`Body Mass (g)` < 2900)
 
 tmp <- penguins_raw %>% 
-  filter(`Date Egg` > "2009-11-30"	)
+  filter(`Date Egg` > "2009-11-30")
 
 tmp <- penguins_raw %>% 
   filter(`Body Mass (g)` < 2900 & `Date Egg` > "2008-11-20")
 ```
 
-数値や日付で~以上・以下などを取り扱う事もできる
+数値や日付で~以上・以下などを取り扱う事もできる  
 また、and (&), or (|) などの演算子で複数条件を取り扱うことも可能
 
 ---
-# group_by
-主にデータの集計に用いられる関数
-関数の()内にグループとしてくくりたい変数を記入する
+# group_by()
+主にデータの集計に用いられる関数   
+関数の()内にグルーピングに使いたい変数を記入する
 
 ```{r}
 tmp <- penguins_raw %>% group_by(Island)
 head(tmp)
 ```
 
-ただ単にgroup_by()関数に渡すだけではデータの見た目は変わらない
+単にgroup_by()関数に渡すだけではデータの見た目は変わらない
 
 ---
-# group_by
-主にデータの集計に用いられる関数
-関数の()内にグループとしてくくりたい変数を記入する
+# summarise()
 
 ```{r}
 tmp <- penguins_raw %>% group_by(Island) %>%
-  summarize(N = n()) %>%
+  summarise(N = n())
+tmp
+```
+summarise()は名の通りグルーピングしたデータを集計するための関数  
+n(), mean(), sum(), sd()などの関数を使って、
+group_by()関数で指定した変数で集計値を計算できる
+
+---
+# mutate()
+```{r}
+tmp <- penguins_raw %>% group_by(Island) %>%
+  summarise(N = n()) %>%
   mutate(freq = N/sum(N),
          pct = round((freq * 100), 0))
 tmp
 ```
 
----
-# group_by
-```{r, eval=F}
-tmp <- penguins_raw %>% group_by(Island) %>%
-  summarize(N = n()) %>%
-  mutate(freq = N/sum(N),
-         pct = round((freq * 100), 0))
-```
-summarize()は名の通り集計を実行するための関数。
-内部でn()やmean(), sum(), sd()などの関数を使って、
-group_by()関数で指定した変数で集計値を計算できる。
+mutate()関数は新しい変数を追加するための関数  
+様々な加工が可能  
+上記ではNをNの合計で除したfreqという名前の変数を作ったあと、  
+freqに100を書けて整数にまるめたpctという名前の変数を作っている  
 
-mutate()関数は新しい変数を追加するための関数。
-様々な加工が可能。
-上記ではNをNの合計で除したfreqという名前の変数を作ったあと、
-それに100を書けて整数にまるめたpctという名前の変数を作っている。
-
-島ごとの割合が計算できる
 
 ---
-# group_by
-```{r, eval=F}
+# group_by() 補足
+```{r, message=FALSE}
 tmp <- penguins_raw %>% group_by(Island, Species) %>%
-  summarize(N = n()) %>%
+  summarise(N = n()) %>%
   mutate(freq = N/sum(N),
          pct = round((freq * 100), 0))
+tmp
 ```
 
 group_by()関数の()内に複数の変数をとることで、
-複数の変数にまたがった集計も可能。
+複数の変数にまたがった集計も可能
 
 ---
-# group_by
+# 目標の図1
+```{r, echo=F, message=F, fig.width=12, fig.height=5.5}
+tmp <- penguins_raw %>% tidyr::complete(Island, Species) %>%
+  group_by(Island, Species) %>%
+  summarise(N = n()) %>%
+  mutate(N = case_when(N == 1 ~ 0,
+                       TRUE ~ as.numeric(N)),
+         freq = N/sum(N),
+         pct = round((freq * 100), 0))
+
+tmp %>% ggplot(aes(x = Island, y = pct, fill = Species)) +
+  geom_col(position = "dodge")
+```
+
+それぞれの島ごとにおける種の割合を可視化したい
+
+---
+# 目標の図のための集計
 ```{r, message=FALSE}
 tmp <- penguins_raw %>% complete(Island, Species) %>%
   group_by(Island, Species) %>%
-  summarize(N = n()) %>%
+  summarise(N = n()) %>%
   mutate(N = case_when(N == 1 ~ 0,
                        TRUE ~ as.numeric(N)),
          freq = N/sum(N),
@@ -327,12 +389,12 @@ tmp <- penguins_raw %>% complete(Island, Species) %>%
 ```
 
 最初の図を作るために先に集計してしまう  
-tidyrパッケージのcomplete()関数を使ってすべての組み合わせを作成
-mutate内のcase_when()関数で、complete()関数で作られた1つしかない組み合わせについては値を1から0に変更  
-その他の変数についてはそのままの数字を入れておく
+complete()関数を使ってすべての組み合わせを作成
+mutate内のcase_when()関数で、complete()関数で作られた組み合わせの値を0に  
+その他のNについてはそのままの数字を入れておく
 
 ---
-# group_by
+# 目標の図のための集計結果
 ```{r}
 tmp
 ```
@@ -341,15 +403,22 @@ tmp
 
 
 ---
-# group_by
+# 目標だった図
 ```{r, fig.width=12, fig.height=5}
 tmp %>% ggplot(aes(x = Island, y = pct, fill = Species)) +
-  geom_col(position = "dodge")
+  geom_bar(stat = "identity", position = "dodge")
 ```
 
 先に集計を済ませておけば、作図のコードは簡単かつ明快に  
-0の部分にバーが立つこともない
+0の部分にバーが立つこともない  
+geom_bar()はデフォルトでデータの個数をカウントするので、stat引数に"identity"を与える必要がある点には注意  
+geom_col()関数を代わりに使うとデフォルトのstatが"identity"なので安心？
 
+---
+class: inverse, middle, center
+
+# 島・種・ペンギンの性別ごとの体重比較
+## データの加工・集計2
 
 ---
 # 目標の図2
@@ -389,7 +458,7 @@ head(tmp$char)
 ```
 
 tidyverseパッケージに含まれる文字列処理用パッケージのstringrパッケージを利用  
-str_c()関数を使ってIsland, Species, Sex列の文字を結合したchar列を作る
+str_c()関数を使ってIsland, Species, Sex列の文字を結合したchar列を作る  
 NAの行があることに注意
 
 ---
@@ -399,8 +468,9 @@ tmp %>% ggplot(aes(x = char, y = `Body Mass (g)`, fill = Species)) +
   geom_boxplot()
 ```
 
+普段のようにy軸に体重を示した場合のことを考える  
 x軸の各カテゴリのラベルが重なってしまっている  
-x軸のラベル (char) が意味不明
+このため、目標ではy軸を島・種・ペンギンの性別の組み合わせとした
 
 ---
 # x, y軸の入れ替え
@@ -412,8 +482,7 @@ tmp %>%
 ```
 
 coord_flip()関数でx,y軸を入れ替えた  
-NAは性別の情報がない個体が存在するため
-見やすくなったが順序がばらばらでわかりにくい
+y軸は見やすくなったが順序がばらばらでわかりにくい
 凡例の場所やラベル情報をいじりたい…
 
 ---
@@ -428,7 +497,7 @@ tmp %>% filter(!is.na(char)) %>%
   theme(legend.position = "top")
 ```
 NAをfilter()関数で削除  
-ggplot関数のx引数でreorder()関数を使い、体重順に並び替え
+aesのx引数でreorder()関数を使い、体重順に並び替え  
 labs()関数でラベル、theme()関数のlegend.position引数で凡例位置を調整
 
 ---
@@ -454,93 +523,33 @@ tmp %>% filter(!is.na(char)) %>%
   labs(x = NULL) +
   theme(legend.position = "top")
 ```
-各個体を重ならずにプロットしたい場合にはgeom_jitter()を利用すると良い
+geom_jitter()関数で各個体を重ねずにプロットできる
 
+---
 # 目標の図　改変2
-```{r, fig.width=12, fig.height=4.5, warning=F}
+```{r, fig.width=12, fig.height=4, warning=F}
 tmp %>% filter(!is.na(char)) %>%
   ggplot(aes(x = reorder(char, `Body Mass (g)`, na.rm = T), 
                    y = `Body Mass (g)`, colour = Species)) + 
-  geom_jitter(width = 0.15) + # width引数でズレを調節
-  coord_flip() + 
-  labs(x = NULL) +
+  geom_jitter(width = 0.15) + coord_flip() + labs(x = NULL) +
   scale_y_log10() +
   theme(legend.position = "top")
 ```
 
-scale_y_log10()関数を使うとy軸を対数変換することもできる  
-見た目はx軸なのに、体重をyに指定しているのでscale_yと書く必要があるので注意
+scale_y_log10()関数を使うとy軸を対数変換できる  
+軸や色の調整のために、何種類もscale_hoge_huga()関数が用意されている
 
 ---
-# モデルデータの構造
-.tiny[
-```{r}
-model <- lm(`Delta 15 N (o/oo)` ~ `Delta 13 C (o/oo)` + Sex, data = penguins_raw)
-summary(model)
-```
-]
+class: inverse, middle, center
 
-一般的な線形回帰モデルとその結果  
-summary()関数で結果は簡単に確認できるが、数値データをここから抽出するのは難しい
-
+# 炭素安定同位体比と窒素安定同位体の回帰モデルデータ可視化
+## モデルデータの可視化
 
 ---
-# モデルデータの構造
-.tiny[
-```{r}
-str(model, give.attr = F)
-```
-]
-
-str()関数でモデルオブジェクトの構造を確認  
-coefficientsやresidualsを始めとした、モデルに関する様々なデータが格納　　
-これらに直接アクセスして可視化に使うことも簡単ではない
-
----
-# broomパッケージ
-```{r}
-library(broom)
-model %>% tidy() %>% 　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
-  as.data.frame() %>%　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
-  round_df()
-```
-
-broomパッケージの関数でモデルオブジェクトからデータをdataframeの形で抽出できる  
-tidy()関数で変数名をterm, 回帰係数をestimateなどを抽出できている  
-ここではtidy()関数の出力をas.data.frame()関数でtibbleからdataframeに変更した後、socviz()パッケージのround_df()関数で有効数字を丸めている
-
----
-# broomパッケージ
-.small2[
-```{r}
-tmp <- model %>% tidy(conf.int = T) %>% 
-  as.data.frame() %>%
-  round_df() %>% filter(term != "(Intercept)")
-
-tmp
-```
-]
-
-tidy(conf.int = T)とすれば95％信頼区間も合わせて抽出できる
-
----
-# 回帰係数・信頼区間の可視化
-```{r, fig.width=12, fig.height=4.5, warning=F}
-tmp %>% ggplot(aes(x = reorder(term, estimate), y = estimate,
-                   ymin = conf.low, ymax = conf.high)) + 
-  geom_pointrange() + 
-  coord_flip() +
-  labs(x =  NULL, y = "OLS estimate")
-```
-
-データフレームになったデータからの可視化は比較的容易  
-aes()関数の引数ymin, ymaxに信頼区間の上下を指定
-
----
-# 目標の図
+# 目標の図3
 ```{r, fig.width=12, fig.height=4.5, warning=F, echo=F}
 fit_ols <- function(penguins_raw){
-  lm(`Delta 15 N (o/oo)` ~ `Delta 13 C (o/oo)`, data = penguins_raw)
+  lm(`Delta 15 N (o/oo)` ~ `Delta 13 C (o/oo)` + Sex, data = penguins_raw)
 }
 
 res <- penguins_raw %>% 
@@ -550,7 +559,7 @@ res <- penguins_raw %>%
          results = purrr:::map(model, tidy)) %>% 
   unnest(results) %>% 
   select(!c(model, data)) %>% 
-  filter(term != "(Intercept)") %>% 
+  filter(term == "`Delta 13 C (o/oo)`") %>% 
   round_df()
 
 p <- res %>% ggplot(aes(x = Species,
@@ -565,13 +574,99 @@ p + geom_pointrange(position = position_dodge(width = 1)) +
     labs(x = "Species", y = "Estimate", color = "Island") + 
     coord_flip()
 ```
-lm(`Delta 15 N (o/oo)` ~ `Delta 13 C (o/oo)`, data = penguins_raw)の回帰係数を種・島ごとに比較する図を作りたい
+lm(Delta 15 N (o/oo) ~ Delta 13 C (o/oo) + Sex, data = penguins_raw)モデルにおける、Delta 13 Cの回帰係数, 信頼区間を種・島ごとに比較する図を作りたい
 
+---
+# モデルデータの構造
+.tiny[
+```{r}
+model <- lm(`Delta 15 N (o/oo)` ~ `Delta 13 C (o/oo)` + Sex, data = penguins_raw)
+summary(model)
+```
+]
+
+一般的な線形回帰モデルとその結果  
+summary()関数で結果は簡単に確認できるが、数値データをここから抽出するのは難しい  
+Delta 13 C, Delta 15 N: 食物連鎖の指標
+
+---
+# モデルデータの構造
+.tiny[
+```{r}
+str(model, give.attr = F)
+```
+]
+
+str()関数でモデルオブジェクトの構造を確認  
+coefficientsやresidualsを始めとした、モデルに関する様々なデータが格納  
+これらに直接アクセスして可視化に使うのは簡単ではない  
+→ broomパッケージの利用
+
+---
+# broomパッケージ: tidy()関数
+```{r}
+tmp <- model %>% tidy() %>% 　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
+  as.data.frame() %>%　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
+  round_df()
+
+tmp
+```
+
+broomパッケージの関数でモデルオブジェクトからデータをdataframeの形で抽出できる  
+tidy()関数で変数名をterm, 回帰係数をestimateなどを抽出できている  
+  
+ここではtidy()関数の出力をas.data.frame()関数でtibbleからdataframeに変更した後、socviz()パッケージのround_df()関数で有効数字を丸めている
+  
+tidy()関数は一般的な線形回帰や一般化線形モデルだけでなく、利用するパッケージによってはlassoやk-means, 生存時間分析など、様々なモデルの出力を取り扱うこともできる
+
+
+---
+# 回帰係数の可視化
+```{r, fig.width=12, fig.height=4.5, warning=F}
+tmp %>% ggplot(aes(x = reorder(term, estimate), y = estimate)) + 
+  geom_point() + 
+  coord_flip() +
+  labs(x =  NULL, y = "OLS estimate")
+```
+
+回帰係数を可視化: tidy()関数で抽出されたestimateをggplot()関数のyの引数に
+その後、geom_point()関数で係数を点で図示する  
+→ 信頼区間が表示されていない
+
+---
+# broomパッケージ: 信頼区間の抽出
+.small2[
+```{r}
+tmp <- model %>% tidy(conf.int = T) %>% 
+  as.data.frame() %>%
+  round_df() %>% filter(term != "(Intercept)")
+
+tmp
+```
+]
+
+tidy(conf.int = T)とすれば95％信頼区間も合わせて抽出できる
+
+---
+# 回帰係数・信頼区間の可視化
+```{r, fig.width=12, fig.height=4, warning=F}
+tmp %>% ggplot(aes(x = reorder(term, estimate), y = estimate,
+                   ymin = conf.low, ymax = conf.high)) + 
+  geom_pointrange() + 
+  coord_flip() +
+  labs(x =  NULL, y = "OLS estimate")
+```
+
+データフレームになったデータからの可視化は比較的容易  
+aes()関数の引数ymin, ymaxに信頼区間の上下を指定  
+→ 島、種ごとに解析・図示しているわけではない
 
 ---
 # group_by()とnest()
 ```{r}
-tmp <- penguins_raw %>% group_by(Species) %>% nest()
+tmp <- penguins_raw %>% 
+  group_by(Species) %>% 
+  nest()
 tmp
 ```
 
@@ -579,7 +674,6 @@ nest()関数を使うと、group_by()関数でグループ化した変数に基�
 入れ子になったデータフレームの大きさが各種の個体数に対応している点に注目
 ---
 # group_by()とnest()
-
 ```{r}
 head(tmp$data[[1]])
 ```
@@ -591,23 +685,26 @@ head(tmp$data[[1]])
 tmp <- penguins_raw %>% group_by(Species, Island) %>% nest()
 tmp
 ```
-作成したい目標の図のために、Species, Islandでgroup_byすると上記の様になる
-これを如何に図に持っていくか
+作成したい目標の図のために、Species, Islandでgroup_byすると上記のようになる    
+これをこのデータをどうやってモデリングして図にするか
 
+---
+# 関数の準備
 ```{r}
 fit_ols <- function(df){
-  lm(`Delta 15 N (o/oo)` ~ `Delta 13 C (o/oo)`, data = df)
+  lm(`Delta 15 N (o/oo)` ~ `Delta 13 C (o/oo)` + Sex, data = df)
+}
+
+tidy2 <- function(model){
+  tidy(model, conf.int = T)
 }
 ```
-先に与えられたデータについてモデルを当てはめるための関数を作っておく
+先に与えられたデータについてモデルを当てはめるための関数を作っておく  
+tidy()関数を改造して各model列に繰り返し適用するためのtidy2()関数を作っておく
 
 ---
 # purrrパッケージとmap()関数
 ```{r}
-tidy2 <- function(model){
-  tidy(model, conf.int = T)
-}
-
 tmp <- penguins_raw %>% 
   group_by(Species, Island) %>% 
   nest() %>% 
@@ -615,10 +712,10 @@ tmp <- penguins_raw %>%
          results = map(model, tidy2))
 ```
 
-mutate()関数でmodelをnestしたそれぞれのデータに当てはめる
-map()関数はtidyverseパッケージ群のpurrrパッケージに帰属する関数  
-for文をより簡潔に記述するための関数であり、第一引数に記述した対象に対して、第二引数に記述した処理をまとめて実行できる
-tidy()関数を改造したtidy2()関数をmodel列に当てはめてresultに結果を入れておく  
+mutate()関数でmodelをnestしたそれぞれのデータに当てはめる  
+map()関数はtidyverseパッケージ群のpurrrパッケージの関数  
+for文をより簡潔に記述するための関数であり、第一引数に記述した対象に対して、第二引数に記述した処理をまとめて実行できる  
+ここでは先程作ったfit_olsとtidy2()関数をそれぞれのデータに適用
 
 ---
 # purrrパッケージとmap()関数
@@ -626,7 +723,7 @@ tidy()関数を改造したtidy2()関数をmodel列に当てはめてresultに�
 ```{r}
 tmp <- tmp %>% unnest(results) %>% 
   select(!c(model, data)) %>% 
-  filter(term != "(Intercept)") %>% 
+  filter(term == "`Delta 13 C (o/oo)`") %>% 
   round_df()
 
 tmp
@@ -634,14 +731,14 @@ tmp
 ]
 
 unnest()関数は入れ子状になったデータを引数に基づいて入れ子を解除する関数である  
-解除したところ、モデルの結果がSpecies, Islandごとに格納されていることがわかる
+解除したところ、モデルの結果がSpecies, Islandごとに格納されていることがわかる  
 この結果に基づき可視化してみよう
 
 ---
 # 目標の図
 .small2[
 ```{r, fig.width=12, fig.height=4.5, warning=F}
-p <- tmp %>% ggplot(aes(x = Species,y = estimate,
+p <- tmp %>% ggplot(aes(x = Species, y = estimate,
                         ymin = conf.low, ymax = conf.high,
                         group = Island, color = Island))
 
@@ -653,3 +750,13 @@ p + geom_pointrange(position = position_dodge(width = 1)) +
 ]
 
 目標の図を作ることができた
+
+---
+# 本節まとめ
+ggplot2の機能だけで図を描いていくのも良いが、データを先に集計しておくことで、より簡潔に意図する図を描くことができること  
+
+データの集計・加工にはdplyrパッケージの関数群を利用すると、効率よく前処理作業を行うことができる  
+
+モデルデータは複雑な構造をしているため、broomパッケージの支援をうけて可視化に用いる数値データを抽出すると良い  
+
+特定の変数グループごとにモデルを作って可視化したい場合には、dplyrのnest()関数, broomのtidy()関数、purrrのmap()関数を併用すると効率的である

@@ -18,25 +18,25 @@
  *  Version: 0.4.0
  *
  * ------------------------------------------------------- */
-@import url(https://fonts.googleapis.com/css?family=Noto+Sans:400,400i,700,700i&display=swap);
-@import url(https://fonts.googleapis.com/css?family=Cabin:600,600i&display=swap);
+@import url(https://fonts.googleapis.com/css?family=Noto+Sans+JP&display=swap);
+@import url(https://fonts.googleapis.com/css?family=Noto+Sans+JP&display=swap);
 @import url(https://fonts.googleapis.com/css?family=Source+Code+Pro:400,700&display=swap);
 
 
 :root {
   /* Fonts */
-  --text-font-family: 'Noto Sans';
+  --text-font-family: 'Noto Sans JP';
   --text-font-is-google: 1;
   --text-font-family-fallback: -apple-system, BlinkMacSystemFont, avenir next, avenir, helvetica neue, helvetica, Ubuntu, roboto, noto, segoe ui, arial;
   --text-font-base: sans-serif;
-  --header-font-family: Cabin;
+  --header-font-family: 'Noto Sans JP';
   --header-font-is-google: 1;
   --header-font-family-fallback: Georgia, serif;
   --code-font-family: 'Source Code Pro';
   --code-font-is-google: 1;
   --base-font-size: 20px;
   --text-font-size: 18px;
-  --code-font-size: 18px;
+  --code-font-size: 16px;
   --code-inline-font-size: 1em;
   --header-h1-font-size: 30px;
   --header-h2-font-size: 20px;
