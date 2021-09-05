@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="" xml:lang="">
   <head>
-    <title>データの加工・集計と統計モデルのデータ可視化</title>
+    <title>第2部 データの加工・集計と統計モデルのデータ可視化</title>
     <meta charset="utf-8" />
     <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
   </head>
@@ -9,7 +9,7 @@
     <textarea id="source">
 class: center, middle, inverse, title-slide
 
-# データの加工・集計と統計モデルのデータ可視化
+# 第2部 データの加工・集計と統計モデルのデータ可視化
 
 ---
 
@@ -167,7 +167,7 @@ penguins_raw %&gt;% ggplot(aes(x = Island, fill = Species)) +
 
 ```r
 penguins_raw %&gt;% ggplot(aes(x = Island, fill = Species)) +
-  geom_bar(position = "dodge")
+* geom_bar(position = "dodge")
 ```
 
 ![](チュートリアル_files/figure-html/unnamed-chunk-8-1.png)&lt;!-- --&gt;
@@ -183,7 +183,7 @@ position引数に"dodge"を指定すると種別に並べて作図できる
 ```r
 penguins_raw %&gt;% ggplot(aes(x = Island, fill = Species)) +
   geom_bar(position = "dodge",
-           aes(y = after_stat(prop)))
+*          aes(y = after_stat(prop)))
 ```
 
 ![](チュートリアル_files/figure-html/unnamed-chunk-9-1.png)&lt;!-- --&gt;
@@ -196,7 +196,7 @@ penguins_raw %&gt;% ggplot(aes(x = Island, fill = Species)) +
 ```r
 penguins_raw %&gt;% ggplot(aes(x = Island, fill = Species)) +
   geom_bar(position = "dodge",
-           aes(y = after_stat(prop), group = Species))
+*          aes(y = after_stat(prop), group = Species))
 ```
 
 ![](チュートリアル_files/figure-html/unnamed-chunk-10-1.png)&lt;!-- --&gt;
@@ -210,7 +210,7 @@ group引数にSpeciesを与えてやると、種のカウントにしたがっ�
 ```r
 penguins_raw %&gt;% ggplot(aes(x = Island, fill = Species)) +
   geom_bar(position = "dodge",
-           aes(y = after_stat(prop), group = Island))
+*          aes(y = after_stat(prop), group = Island))
 ```
 
 ![](チュートリアル_files/figure-html/unnamed-chunk-11-1.png)&lt;!-- --&gt;
@@ -223,7 +223,7 @@ group引数にIslandを与えると種での分割を表現できない...
 ```r
 penguins_raw %&gt;% 
   ggplot(aes(x = Island, fill = Species)) +
-  geom_bar(aes(y = after_stat(count/tapply(count, x, sum)[x]), 
+* geom_bar(aes(y = after_stat(count/tapply(count, x, sum)[x]),
                group = Species), position = "dodge") 
 ```
 
@@ -237,7 +237,7 @@ after_stat()関数内で島ごと (x) の割合を計算してy軸の値に使�
 
 ```r
 penguins_raw %&gt;% 
-  complete(Species, Island) %&gt;%
+* complete(Species, Island) %&gt;%
   ggplot(aes(x = Island, fill = Species)) +
   geom_bar(aes(y = after_stat(count/tapply(count, x, sum)[x]), 
                group = Species), position = "dodge") 
@@ -303,7 +303,7 @@ head(tmp)
 
 ```r
 tmp &lt;- penguins_raw %&gt;% 
-  select(!c(Species, Island, Sex, `Flipper Length (mm)`, `Body Mass (g)`))
+* select(!c(Species, Island, Sex, `Flipper Length (mm)`, `Body Mass (g)`))
 head(tmp)
 ```
 
@@ -330,7 +330,7 @@ head(tmp)
 
 ```r
 tmp &lt;- penguins_raw %&gt;% 
-  filter(Species == "Gentoo penguin (Pygoscelis papua)")
+* filter(Species == "Gentoo penguin (Pygoscelis papua)")
 head(tmp)
 ```
 
@@ -378,7 +378,7 @@ tmp &lt;- penguins_raw %&gt;%
 
 
 ```r
-tmp &lt;- penguins_raw %&gt;% group_by(Island)
+*tmp &lt;- penguins_raw %&gt;% group_by(Island)
 head(tmp)
 ```
 
@@ -407,7 +407,7 @@ head(tmp)
 
 ```r
 tmp &lt;- penguins_raw %&gt;% group_by(Island) %&gt;%
-  summarise(N = n())
+* summarise(N = n())
 tmp
 ```
 
@@ -429,8 +429,8 @@ group_by()関数で指定した変数で集計値を計算できる
 ```r
 tmp &lt;- penguins_raw %&gt;% group_by(Island) %&gt;%
   summarise(N = n()) %&gt;%
-  mutate(freq = N/sum(N),
-         pct = round((freq * 100), 0))
+* mutate(freq = N/sum(N),
+*        pct = round((freq * 100), 0))
 tmp
 ```
 
@@ -453,7 +453,7 @@ freqに100を書けて整数にまるめたpctという名前の変数を作っ�
 # group_by() 補足
 
 ```r
-tmp &lt;- penguins_raw %&gt;% group_by(Island, Species) %&gt;%
+*tmp &lt;- penguins_raw %&gt;% group_by(Island, Species) %&gt;%
   summarise(N = n()) %&gt;%
   mutate(freq = N/sum(N),
          pct = round((freq * 100), 0))
@@ -485,11 +485,11 @@ group_by()関数の()内に複数の変数をとることで、
 # 目標の図のための集計
 
 ```r
-tmp &lt;- penguins_raw %&gt;% complete(Island, Species) %&gt;%
+*tmp &lt;- penguins_raw %&gt;% complete(Island, Species) %&gt;%
   group_by(Island, Species) %&gt;%
   summarise(N = n()) %&gt;%
-  mutate(N = case_when(N == 1 ~ 0,
-                       TRUE ~ as.numeric(N)),
+* mutate(N = case_when(N == 1 ~ 0,
+*                      TRUE ~ as.numeric(N)),
          freq = N/sum(N),
          pct = round((freq * 100), 0))
 ```
@@ -530,15 +530,27 @@ tmp
 
 ```r
 tmp %&gt;% ggplot(aes(x = Island, y = pct, fill = Species)) +
-  geom_bar(stat = "identity", position = "dodge")
+* geom_bar(stat = "identity", position = "dodge")
 ```
 
 ![](チュートリアル_files/figure-html/unnamed-chunk-25-1.png)&lt;!-- --&gt;
 
-先に集計を済ませておけば、作図のコードは簡単かつ明快に  
-0の部分にバーが立つこともない  
 geom_bar()はデフォルトでデータの個数をカウントするので、stat引数に"identity"を与える必要がある点には注意  
 geom_col()関数を代わりに使うとデフォルトのstatが"identity"なので安心？
+
+
+---
+# 目標だった図
+
+```r
+tmp %&gt;% ggplot(aes(x = Island, y = pct, fill = Species)) +
+* geom_col(position = "dodge")
+```
+
+![](チュートリアル_files/figure-html/unnamed-chunk-26-1.png)&lt;!-- --&gt;
+
+先に集計を済ませておけば、作図のコードは簡単かつ明快に  
+0の部分にバーが立つこともない 
 
 ---
 class: inverse, middle, center
@@ -548,7 +560,7 @@ class: inverse, middle, center
 
 ---
 # 目標の図2
-![](チュートリアル_files/figure-html/unnamed-chunk-26-1.png)&lt;!-- --&gt;
+![](チュートリアル_files/figure-html/unnamed-chunk-27-1.png)&lt;!-- --&gt;
 
 y軸は島・種・ペンギンの性別、x軸を体重にして、種で色分けをした図を作りたい
 
@@ -591,7 +603,7 @@ str(penguins_raw, give.attr = F)
 
 ```r
 tmp &lt;- penguins_raw %&gt;% 
-  mutate(char = str_c(Island, Species, Sex, sep = "_"))
+* mutate(char = str_c(Island, Species, Sex, sep = "_"))
 
 head(tmp$char)
 ```
@@ -614,12 +626,13 @@ NAの行があることに注意
 
 ```r
 tmp %&gt;% ggplot(aes(x = char, y = `Body Mass (g)`, fill = Species)) + 
-  geom_boxplot()
+* geom_boxplot()
 ```
 
-![](チュートリアル_files/figure-html/unnamed-chunk-29-1.png)&lt;!-- --&gt;
+![](チュートリアル_files/figure-html/unnamed-chunk-30-1.png)&lt;!-- --&gt;
 
 普段のようにy軸に体重を示した場合のことを考える  
+箱ひげ図なのでgeom_boxplot()を使用  
 x軸の各カテゴリのラベルが重なってしまっている  
 このため、目標ではy軸を島・種・ペンギンの性別の組み合わせとした
 
@@ -630,10 +643,10 @@ x軸の各カテゴリのラベルが重なってしまっている
 tmp %&gt;% 
   ggplot(aes(x = char, y = `Body Mass (g)`, fill = Species)) + 
   geom_boxplot() + 
-  coord_flip()
+* coord_flip()
 ```
 
-![](チュートリアル_files/figure-html/unnamed-chunk-30-1.png)&lt;!-- --&gt;
+![](チュートリアル_files/figure-html/unnamed-chunk-31-1.png)&lt;!-- --&gt;
 
 coord_flip()関数でx,y軸を入れ替えた  
 y軸は見やすくなったが順序がばらばらでわかりにくい
@@ -643,13 +656,13 @@ y軸は見やすくなったが順序がばらばらでわかりにくい
 # 目標の図のためのコード
 
 ```r
-tmp %&gt;% filter(!is.na(char)) %&gt;% 
-  ggplot(aes(x = reorder(char, `Body Mass (g)`, na.rm = T), 
+*tmp %&gt;% filter(!is.na(char)) %&gt;%
+* ggplot(aes(x = reorder(char, `Body Mass (g)`, na.rm = T),
              y = `Body Mass (g)`, fill = Species)) + 
   geom_boxplot() + 
   coord_flip() + 
-  labs(x = NULL) +
-  theme(legend.position = "top")
+* labs(x = NULL) +
+* theme(legend.position = "top")
 ```
 NAをfilter()関数で削除  
 aesのx引数でreorder()関数を使い、体重順に並び替え  
@@ -668,7 +681,7 @@ tmp %&gt;% filter(!is.na(char)) %&gt;%
   theme(legend.position = "top")
 ```
 
-![](チュートリアル_files/figure-html/unnamed-chunk-32-1.png)&lt;!-- --&gt;
+![](チュートリアル_files/figure-html/unnamed-chunk-33-1.png)&lt;!-- --&gt;
 
 ---
 # 目標の図　改変
@@ -677,14 +690,15 @@ tmp %&gt;% filter(!is.na(char)) %&gt;%
 tmp %&gt;% filter(!is.na(char)) %&gt;%
   ggplot(aes(x = reorder(char, `Body Mass (g)`, na.rm = T), 
                    y = `Body Mass (g)`, colour = Species)) + 
-  geom_jitter(width = 0.15) + # width引数でズレを調節
+* geom_jitter(width = 0.15) +
   coord_flip() + 
   labs(x = NULL) +
   theme(legend.position = "top")
 ```
 
-![](チュートリアル_files/figure-html/unnamed-chunk-33-1.png)&lt;!-- --&gt;
-geom_jitter()関数で各個体を重ねずにプロットできる
+![](チュートリアル_files/figure-html/unnamed-chunk-34-1.png)&lt;!-- --&gt;
+geom_jitter()関数で各個体を重ねずにプロットできる  
+width引数でズレの幅を調節  
 
 ---
 # 目標の図　改変2
@@ -694,11 +708,11 @@ tmp %&gt;% filter(!is.na(char)) %&gt;%
   ggplot(aes(x = reorder(char, `Body Mass (g)`, na.rm = T), 
                    y = `Body Mass (g)`, colour = Species)) + 
   geom_jitter(width = 0.15) + coord_flip() + labs(x = NULL) +
-  scale_y_log10() +
+* scale_y_log10() +
   theme(legend.position = "top")
 ```
 
-![](チュートリアル_files/figure-html/unnamed-chunk-34-1.png)&lt;!-- --&gt;
+![](チュートリアル_files/figure-html/unnamed-chunk-35-1.png)&lt;!-- --&gt;
 
 scale_y_log10()関数を使うとy軸を対数変換できる  
 軸や色の調整のために、何種類もscale_hoge_huga()関数が用意されている
@@ -711,7 +725,7 @@ class: inverse, middle, center
 
 ---
 # 目標の図3
-![](チュートリアル_files/figure-html/unnamed-chunk-35-1.png)&lt;!-- --&gt;
+![](チュートリアル_files/figure-html/unnamed-chunk-36-1.png)&lt;!-- --&gt;
 lm(Delta 15 N (o/oo) ~ Delta 13 C (o/oo) + Sex, data = penguins_raw)モデルにおける、Delta 13 Cの回帰係数, 信頼区間を種・島ごとに比較する図を作りたい
 
 ---
@@ -798,7 +812,7 @@ coefficientsやresidualsを始めとした、モデルに関する様々なデ�
 # broomパッケージ: tidy()関数
 
 ```r
-tmp &lt;- model %&gt;% tidy() %&gt;% 　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
+*tmp &lt;- model %&gt;% tidy() %&gt;%
   as.data.frame() %&gt;%　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
   round_df()
 
@@ -825,12 +839,12 @@ tidy()関数は一般的な線形回帰や一般化線形モデルだけでな�
 
 ```r
 tmp %&gt;% ggplot(aes(x = reorder(term, estimate), y = estimate)) + 
-  geom_point() + 
+* geom_point() +
   coord_flip() +
   labs(x =  NULL, y = "OLS estimate")
 ```
 
-![](チュートリアル_files/figure-html/unnamed-chunk-39-1.png)&lt;!-- --&gt;
+![](チュートリアル_files/figure-html/unnamed-chunk-40-1.png)&lt;!-- --&gt;
 
 回帰係数を可視化: tidy()関数で抽出されたestimateをggplot()関数のyの引数に
 その後、geom_point()関数で係数を点で図示する  
@@ -841,7 +855,7 @@ tmp %&gt;% ggplot(aes(x = reorder(term, estimate), y = estimate)) +
 .small2[
 
 ```r
-tmp &lt;- model %&gt;% tidy(conf.int = T) %&gt;% 
+*tmp &lt;- model %&gt;% tidy(conf.int = T) %&gt;%
   as.data.frame() %&gt;%
   round_df() %&gt;% filter(term != "(Intercept)")
 
@@ -862,13 +876,13 @@ tidy(conf.int = T)とすれば95％信頼区間も合わせて抽出できる
 
 ```r
 tmp %&gt;% ggplot(aes(x = reorder(term, estimate), y = estimate,
-                   ymin = conf.low, ymax = conf.high)) + 
-  geom_pointrange() + 
+*                  ymin = conf.low, ymax = conf.high)) +
+* geom_pointrange() +
   coord_flip() +
   labs(x =  NULL, y = "OLS estimate")
 ```
 
-![](チュートリアル_files/figure-html/unnamed-chunk-41-1.png)&lt;!-- --&gt;
+![](チュートリアル_files/figure-html/unnamed-chunk-42-1.png)&lt;!-- --&gt;
 
 データフレームになったデータからの可視化は比較的容易  
 aes()関数の引数ymin, ymaxに信頼区間の上下を指定  
@@ -880,7 +894,7 @@ aes()関数の引数ymin, ymaxに信頼区間の上下を指定
 ```r
 tmp &lt;- penguins_raw %&gt;% 
   group_by(Species) %&gt;% 
-  nest()
+* nest()
 tmp
 ```
 
@@ -963,8 +977,8 @@ tidy()関数を改造して各model列に繰り返し適用するためのtidy2(
 tmp &lt;- penguins_raw %&gt;% 
   group_by(Species, Island) %&gt;% 
   nest() %&gt;% 
-  mutate(model = map(data, fit_ols),
-         results = map(model, tidy2))
+* mutate(model = map(data, fit_ols),
+*        results = map(model, tidy2))
 ```
 
 mutate()関数でmodelをnestしたそれぞれのデータに当てはめる  
@@ -973,11 +987,11 @@ for文をより簡潔に記述するための関数であり、第一引数に�
 ここでは先程作ったfit_olsとtidy2()関数をそれぞれのデータに適用
 
 ---
-# purrrパッケージとmap()関数
+# nest()の解除
 .small2[
 
 ```r
-tmp &lt;- tmp %&gt;% unnest(results) %&gt;% 
+*tmp &lt;- tmp %&gt;% unnest(results) %&gt;%
   select(!c(model, data)) %&gt;% 
   filter(term == "`Delta 13 C (o/oo)`") %&gt;% 
   round_df()
@@ -1006,17 +1020,17 @@ unnest()関数は入れ子状になったデータを引数に基づいて入れ
 .small2[
 
 ```r
-p &lt;- tmp %&gt;% ggplot(aes(x = Species, y = estimate,
+tmp %&gt;% ggplot(aes(x = Species, y = estimate,
                         ymin = conf.low, ymax = conf.high,
-                        group = Island, color = Island))
-
-p + geom_pointrange(position = position_dodge(width = 1)) +
+                        group = Island, color = Island)) + 
+  
+    geom_pointrange(position = position_dodge(width = 1)) +
     theme(legend.position = "top") +
     labs(x = "Species", y = "Estimate", color = "Island") + 
     coord_flip()
 ```
 
-![](チュートリアル_files/figure-html/unnamed-chunk-48-1.png)&lt;!-- --&gt;
+![](チュートリアル_files/figure-html/unnamed-chunk-49-1.png)&lt;!-- --&gt;
 ]
 
 目標の図を作ることができた
@@ -1029,7 +1043,7 @@ ggplot2の機能だけで図を描いていくのも良いが、データを先�
 
 モデルデータは複雑な構造をしているため、broomパッケージの支援をうけて可視化に用いる数値データを抽出すると良い  
 
-特定の変数グループごとにモデルを作って可視化したい場合には、dplyrのnest()関数, broomのtidy()関数、purrrのmap()関数を併用すると効率的である
+特定の変数グループごとにモデルを作って可視化したい場合には、dplyrのnest()関数, broomのtidy()関数、purrrのmap()関数を併用すると効率的
     </textarea>
 <style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
 <script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>

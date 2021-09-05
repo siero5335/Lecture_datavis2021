@@ -1,5 +1,5 @@
 ---
-title: "データの加工・集計と統計モデルのデータ可視化"
+title: "第2部 データの加工・集計と統計モデルのデータ可視化"
 
 output:
   xaringan::moon_reader:
@@ -166,7 +166,7 @@ penguins_raw %>% ggplot(aes(x = Island, fill = Species)) +
 # バーの分割
 ```{r, message=F, fig.width=12, fig.height=4}
 penguins_raw %>% ggplot(aes(x = Island, fill = Species)) +
-  geom_bar(position = "dodge")
+  geom_bar(position = "dodge") #<<
 ```
 
 position引数に"dodge"を指定すると種別に並べて作図できる  
@@ -179,7 +179,7 @@ position引数に"dodge"を指定すると種別に並べて作図できる
 ```{r, message=F, fig.width=12, fig.height=4}
 penguins_raw %>% ggplot(aes(x = Island, fill = Species)) +
   geom_bar(position = "dodge",
-           aes(y = after_stat(prop)))
+           aes(y = after_stat(prop))) #<<
 ```
 縦軸が割合になっているが、全ての値が１になってしまう  
 → 何を分母にした割合なのか指定していないため
@@ -189,7 +189,7 @@ penguins_raw %>% ggplot(aes(x = Island, fill = Species)) +
 ```{r, message=F, fig.width=12, fig.height=4}
 penguins_raw %>% ggplot(aes(x = Island, fill = Species)) +
   geom_bar(position = "dodge",
-           aes(y = after_stat(prop), group = Species))
+           aes(y = after_stat(prop), group = Species)) #<<
 ```
 
 group引数にSpeciesを与えてやると、種のカウントにしたがって割合にしてくれる  
@@ -200,7 +200,7 @@ group引数にSpeciesを与えてやると、種のカウントにしたがっ�
 ```{r, message=F, fig.width=12, fig.height=4}
 penguins_raw %>% ggplot(aes(x = Island, fill = Species)) +
   geom_bar(position = "dodge",
-           aes(y = after_stat(prop), group = Island))
+           aes(y = after_stat(prop), group = Island)) #<<
 ```
 
 group引数にIslandを与えると種での分割を表現できない...
@@ -210,7 +210,7 @@ group引数にIslandを与えると種での分割を表現できない...
 ```{r, message=F, fig.width=12, fig.height=4}
 penguins_raw %>% 
   ggplot(aes(x = Island, fill = Species)) +
-  geom_bar(aes(y = after_stat(count/tapply(count, x, sum)[x]), 
+  geom_bar(aes(y = after_stat(count/tapply(count, x, sum)[x]), #<<
                group = Species), position = "dodge") 
 ```
 
@@ -221,7 +221,7 @@ after_stat()関数内で島ごと (x) の割合を計算してy軸の値に使�
 # バーの太さ問題への対応
 ```{r, message=F, fig.width=12, fig.height=4}
 penguins_raw %>% 
-  complete(Species, Island) %>%
+  complete(Species, Island) %>% #<<
   ggplot(aes(x = Island, fill = Species)) +
   geom_bar(aes(y = after_stat(count/tapply(count, x, sum)[x]), 
                group = Species), position = "dodge") 
@@ -271,7 +271,7 @@ head(tmp)
 .small2[
 ```{r}
 tmp <- penguins_raw %>% 
-  select(!c(Species, Island, Sex, `Flipper Length (mm)`, `Body Mass (g)`))
+  select(!c(Species, Island, Sex, `Flipper Length (mm)`, `Body Mass (g)`)) #<<
 head(tmp)
 ```
 ]
@@ -282,7 +282,7 @@ head(tmp)
 # データの集計: filter()関数
 ```{r}
 tmp <- penguins_raw %>% 
-  filter(Species == "Gentoo penguin (Pygoscelis papua)")
+  filter(Species == "Gentoo penguin (Pygoscelis papua)") #<<
 head(tmp)
 ```
 
@@ -312,7 +312,7 @@ tmp <- penguins_raw %>%
 関数の()内にグルーピングに使いたい変数を記入する
 
 ```{r}
-tmp <- penguins_raw %>% group_by(Island)
+tmp <- penguins_raw %>% group_by(Island) #<<
 head(tmp)
 ```
 
@@ -323,7 +323,7 @@ head(tmp)
 
 ```{r}
 tmp <- penguins_raw %>% group_by(Island) %>%
-  summarise(N = n())
+  summarise(N = n()) #<<
 tmp
 ```
 summarise()は名の通りグルーピングしたデータを集計するための関数  
@@ -335,8 +335,8 @@ group_by()関数で指定した変数で集計値を計算できる
 ```{r}
 tmp <- penguins_raw %>% group_by(Island) %>%
   summarise(N = n()) %>%
-  mutate(freq = N/sum(N),
-         pct = round((freq * 100), 0))
+  mutate(freq = N/sum(N), #<<
+         pct = round((freq * 100), 0)) #<<
 tmp
 ```
 
@@ -349,7 +349,7 @@ freqに100を書けて整数にまるめたpctという名前の変数を作っ�
 ---
 # group_by() 補足
 ```{r, message=FALSE}
-tmp <- penguins_raw %>% group_by(Island, Species) %>%
+tmp <- penguins_raw %>% group_by(Island, Species) %>% #<<
   summarise(N = n()) %>%
   mutate(freq = N/sum(N),
          pct = round((freq * 100), 0))
@@ -379,11 +379,11 @@ tmp %>% ggplot(aes(x = Island, y = pct, fill = Species)) +
 ---
 # 目標の図のための集計
 ```{r, message=FALSE}
-tmp <- penguins_raw %>% complete(Island, Species) %>%
+tmp <- penguins_raw %>% complete(Island, Species) %>% #<<
   group_by(Island, Species) %>%
   summarise(N = n()) %>%
-  mutate(N = case_when(N == 1 ~ 0,
-                       TRUE ~ as.numeric(N)),
+  mutate(N = case_when(N == 1 ~ 0, #<<
+                       TRUE ~ as.numeric(N)), #<<
          freq = N/sum(N),
          pct = round((freq * 100), 0))
 ```
@@ -406,13 +406,22 @@ tmp
 # 目標だった図
 ```{r, fig.width=12, fig.height=5}
 tmp %>% ggplot(aes(x = Island, y = pct, fill = Species)) +
-  geom_bar(stat = "identity", position = "dodge")
+  geom_bar(stat = "identity", position = "dodge") #<<
+```
+
+geom_bar()はデフォルトでデータの個数をカウントするので、stat引数に"identity"を与える必要がある点には注意  
+geom_col()関数を代わりに使うとデフォルトのstatが"identity"なので安心？
+
+
+---
+# 目標だった図
+```{r, fig.width=12, fig.height=5}
+tmp %>% ggplot(aes(x = Island, y = pct, fill = Species)) +
+  geom_col(position = "dodge") #<<
 ```
 
 先に集計を済ませておけば、作図のコードは簡単かつ明快に  
-0の部分にバーが立つこともない  
-geom_bar()はデフォルトでデータの個数をカウントするので、stat引数に"identity"を与える必要がある点には注意  
-geom_col()関数を代わりに使うとデフォルトのstatが"identity"なので安心？
+0の部分にバーが立つこともない 
 
 ---
 class: inverse, middle, center
@@ -452,7 +461,7 @@ str(penguins_raw, give.attr = F)
 # データの加工
 ```{r}
 tmp <- penguins_raw %>% 
-  mutate(char = str_c(Island, Species, Sex, sep = "_"))
+  mutate(char = str_c(Island, Species, Sex, sep = "_")) #<<
 
 head(tmp$char)
 ```
@@ -465,10 +474,11 @@ NAの行があることに注意
 # まず普通に描いてみる
 ```{r, fig.width=12, fig.height=3, warning=F}
 tmp %>% ggplot(aes(x = char, y = `Body Mass (g)`, fill = Species)) + 
-  geom_boxplot()
+  geom_boxplot() #<<
 ```
 
 普段のようにy軸に体重を示した場合のことを考える  
+箱ひげ図なのでgeom_boxplot()を使用  
 x軸の各カテゴリのラベルが重なってしまっている  
 このため、目標ではy軸を島・種・ペンギンの性別の組み合わせとした
 
@@ -478,7 +488,7 @@ x軸の各カテゴリのラベルが重なってしまっている
 tmp %>% 
   ggplot(aes(x = char, y = `Body Mass (g)`, fill = Species)) + 
   geom_boxplot() + 
-  coord_flip()
+  coord_flip() #<<
 ```
 
 coord_flip()関数でx,y軸を入れ替えた  
@@ -488,13 +498,13 @@ y軸は見やすくなったが順序がばらばらでわかりにくい
 ---
 # 目標の図のためのコード
 ```{r, eval = F}
-tmp %>% filter(!is.na(char)) %>% 
-  ggplot(aes(x = reorder(char, `Body Mass (g)`, na.rm = T), 
+tmp %>% filter(!is.na(char)) %>% #<<
+  ggplot(aes(x = reorder(char, `Body Mass (g)`, na.rm = T), #<<
              y = `Body Mass (g)`, fill = Species)) + 
   geom_boxplot() + 
   coord_flip() + 
-  labs(x = NULL) +
-  theme(legend.position = "top")
+  labs(x = NULL) + #<<
+  theme(legend.position = "top") #<<
 ```
 NAをfilter()関数で削除  
 aesのx引数でreorder()関数を使い、体重順に並び替え  
@@ -514,16 +524,17 @@ tmp %>% filter(!is.na(char)) %>%
 
 ---
 # 目標の図　改変
-```{r, fig.width=12, fig.height=4.5, warning=F}
+```{r, fig.width=12, fig.height=4, warning=F}
 tmp %>% filter(!is.na(char)) %>%
   ggplot(aes(x = reorder(char, `Body Mass (g)`, na.rm = T), 
                    y = `Body Mass (g)`, colour = Species)) + 
-  geom_jitter(width = 0.15) + # width引数でズレを調節
+  geom_jitter(width = 0.15) + #<<
   coord_flip() + 
   labs(x = NULL) +
   theme(legend.position = "top")
 ```
-geom_jitter()関数で各個体を重ねずにプロットできる
+geom_jitter()関数で各個体を重ねずにプロットできる  
+width引数でズレの幅を調節  
 
 ---
 # 目標の図　改変2
@@ -532,7 +543,7 @@ tmp %>% filter(!is.na(char)) %>%
   ggplot(aes(x = reorder(char, `Body Mass (g)`, na.rm = T), 
                    y = `Body Mass (g)`, colour = Species)) + 
   geom_jitter(width = 0.15) + coord_flip() + labs(x = NULL) +
-  scale_y_log10() +
+  scale_y_log10() + #<<
   theme(legend.position = "top")
 ```
 
@@ -605,7 +616,7 @@ coefficientsやresidualsを始めとした、モデルに関する様々なデ�
 ---
 # broomパッケージ: tidy()関数
 ```{r}
-tmp <- model %>% tidy() %>% 　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
+tmp <- model %>% tidy() %>% #<<　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
   as.data.frame() %>%　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　　
   round_df()
 
@@ -624,7 +635,7 @@ tidy()関数は一般的な線形回帰や一般化線形モデルだけでな�
 # 回帰係数の可視化
 ```{r, fig.width=12, fig.height=4.5, warning=F}
 tmp %>% ggplot(aes(x = reorder(term, estimate), y = estimate)) + 
-  geom_point() + 
+  geom_point() + #<<
   coord_flip() +
   labs(x =  NULL, y = "OLS estimate")
 ```
@@ -637,7 +648,7 @@ tmp %>% ggplot(aes(x = reorder(term, estimate), y = estimate)) +
 # broomパッケージ: 信頼区間の抽出
 .small2[
 ```{r}
-tmp <- model %>% tidy(conf.int = T) %>% 
+tmp <- model %>% tidy(conf.int = T) %>% #<<
   as.data.frame() %>%
   round_df() %>% filter(term != "(Intercept)")
 
@@ -651,8 +662,8 @@ tidy(conf.int = T)とすれば95％信頼区間も合わせて抽出できる
 # 回帰係数・信頼区間の可視化
 ```{r, fig.width=12, fig.height=4, warning=F}
 tmp %>% ggplot(aes(x = reorder(term, estimate), y = estimate,
-                   ymin = conf.low, ymax = conf.high)) + 
-  geom_pointrange() + 
+                   ymin = conf.low, ymax = conf.high)) + #<<
+  geom_pointrange() + #<<
   coord_flip() +
   labs(x =  NULL, y = "OLS estimate")
 ```
@@ -666,7 +677,7 @@ aes()関数の引数ymin, ymaxに信頼区間の上下を指定
 ```{r}
 tmp <- penguins_raw %>% 
   group_by(Species) %>% 
-  nest()
+  nest() #<<
 tmp
 ```
 
@@ -708,8 +719,8 @@ tidy()関数を改造して各model列に繰り返し適用するためのtidy2(
 tmp <- penguins_raw %>% 
   group_by(Species, Island) %>% 
   nest() %>% 
-  mutate(model = map(data, fit_ols),
-         results = map(model, tidy2))
+  mutate(model = map(data, fit_ols), #<<
+         results = map(model, tidy2)) #<<
 ```
 
 mutate()関数でmodelをnestしたそれぞれのデータに当てはめる  
@@ -718,10 +729,10 @@ for文をより簡潔に記述するための関数であり、第一引数に�
 ここでは先程作ったfit_olsとtidy2()関数をそれぞれのデータに適用
 
 ---
-# purrrパッケージとmap()関数
+# nest()の解除
 .small2[
 ```{r}
-tmp <- tmp %>% unnest(results) %>% 
+tmp <- tmp %>% unnest(results) %>% #<<
   select(!c(model, data)) %>% 
   filter(term == "`Delta 13 C (o/oo)`") %>% 
   round_df()
@@ -738,11 +749,11 @@ unnest()関数は入れ子状になったデータを引数に基づいて入れ
 # 目標の図
 .small2[
 ```{r, fig.width=12, fig.height=4.5, warning=F}
-p <- tmp %>% ggplot(aes(x = Species, y = estimate,
+tmp %>% ggplot(aes(x = Species, y = estimate,
                         ymin = conf.low, ymax = conf.high,
-                        group = Island, color = Island))
-
-p + geom_pointrange(position = position_dodge(width = 1)) +
+                        group = Island, color = Island)) + 
+  
+    geom_pointrange(position = position_dodge(width = 1)) +
     theme(legend.position = "top") +
     labs(x = "Species", y = "Estimate", color = "Island") + 
     coord_flip()
@@ -759,4 +770,4 @@ ggplot2の機能だけで図を描いていくのも良いが、データを先�
 
 モデルデータは複雑な構造をしているため、broomパッケージの支援をうけて可視化に用いる数値データを抽出すると良い  
 
-特定の変数グループごとにモデルを作って可視化したい場合には、dplyrのnest()関数, broomのtidy()関数、purrrのmap()関数を併用すると効率的である
+特定の変数グループごとにモデルを作って可視化したい場合には、dplyrのnest()関数, broomのtidy()関数、purrrのmap()関数を併用すると効率的
